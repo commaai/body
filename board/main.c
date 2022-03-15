@@ -179,28 +179,20 @@ int main(void) {
 
     if (main_loop_counter % 2 == 0) { // This runs at 100Hz (must be mod 2)
       inactivity_timeout_counter = 0; // Temporarily ignore inactivity timeout
-      // Will move to separate func later
-      if ((CAN2->TSR & CAN_TSR_TME0) == CAN_TSR_TME0) {
-        uint8_t dat[8];
-        uint16_t speedL = rtY_Left.n_mot;
-        uint16_t speedR = -(rtY_Right.n_mot); // Invert speed sign for the right wheel
-        dat[0] = (speedL >> 8U) & 0xFFU;
-        dat[1] = speedL & 0xFFU;
-        dat[2] = (speedR >> 8U) & 0xFFU;
-        dat[3] = speedR & 0xFFU;
-        dat[4] = rtY_Left.a_elecAngle;
-        dat[5] = rtY_Right.a_elecAngle;
-        dat[6] = (batVoltageCalib >> 8U) & 0xFFU;
-        dat[7] = batVoltageCalib & 0xFFU;
 
-        CAN2->sTxMailBox[0].TIR = (0x201U << 21U);
-        CAN2->sTxMailBox[0].TDTR = 8U;
-        CAN2->sTxMailBox[0].TDLR = dat[0] | (dat[1] << 8U) | (dat[2] << 16U) | (dat[3] << 24U);
-        CAN2->sTxMailBox[0].TDHR = dat[4] | (dat[5]<< 8U) | (dat[6] << 16U) | (dat[7] << 24U);
-        // CAN2->sTxMailBox[0].TDLR = dat[0] | (dat[1] << 8U) | (dat[2] << 16U) | (dat[3] << 24U);
-        // CAN2->sTxMailBox[0].TDHR = dat[4] | (dat[5]<< 8U) | (dat[6] << 16U) | (dat[7] << 24U);
-        CAN2->sTxMailBox[0].TIR |= 0x1U;
-      }
+      uint8_t dat[8];
+      uint16_t speedL = rtY_Left.n_mot;
+      uint16_t speedR = -(rtY_Right.n_mot); // Invert speed sign for the right wheel
+      dat[0] = (speedL >> 8U) & 0xFFU;
+      dat[1] = speedL & 0xFFU;
+      dat[2] = (speedR >> 8U) & 0xFFU;
+      dat[3] = speedR & 0xFFU;
+      dat[4] = rtY_Left.a_elecAngle;
+      dat[5] = rtY_Right.a_elecAngle;
+      dat[6] = (batVoltageCalib >> 8U) & 0xFFU;
+      dat[7] = batVoltageCalib & 0xFFU;
+
+      can_send_msg(0x201U, ((dat[7] << 24U) | (dat[6] << 16U) | (dat[5]<< 8U) | dat[4]), ((dat[3] << 24U) | (dat[2] << 16U) | (dat[1] << 8U) | dat[0]), 8U);
     }
 
     if (main_loop_counter % 200 == 0) { // Runs at 1Hz
