@@ -237,6 +237,9 @@ void electricBrake(uint16_t speedBlend, uint8_t reverseDir) {
     } else {  // when (input2.cmd < -ELECTRIC_BRAKE_THRES)
       input2[inIdx].cmd = MIN(brakeVal, ((input2[inIdx].cmd + ELECTRIC_BRAKE_THRES) * INPUT_MIN) / (INPUT_MIN + ELECTRIC_BRAKE_THRES));
     }
+  #else
+  UNUSED(speedBlend);
+  UNUSED(reverseDir);
   #endif
 }
 

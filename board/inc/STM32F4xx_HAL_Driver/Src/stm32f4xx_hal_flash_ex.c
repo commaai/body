@@ -955,6 +955,7 @@ static void FLASH_MassErase(uint8_t VoltageRange, uint32_t Banks)
   /* Check the parameters */
   assert_param(IS_VOLTAGERANGE(VoltageRange));
   assert_param(IS_FLASH_BANK(Banks));
+  UNUSED(Banks);
 
   /* If the previous operation is completed, proceed to erase all sectors */
   CLEAR_BIT(FLASH->CR, FLASH_CR_PSIZE);
@@ -1036,6 +1037,7 @@ static HAL_StatusTypeDef FLASH_OB_EnableWRP(uint32_t WRPSector, uint32_t Banks)
   /* Check the parameters */
   assert_param(IS_OB_WRP_SECTOR(WRPSector));
   assert_param(IS_FLASH_BANK(Banks));
+  UNUSED(Banks);
 
   /* Wait for last operation to be completed */
   status = FLASH_WaitForLastOperation((uint32_t)FLASH_TIMEOUT_VALUE);
@@ -1072,6 +1074,7 @@ static HAL_StatusTypeDef FLASH_OB_DisableWRP(uint32_t WRPSector, uint32_t Banks)
   /* Check the parameters */
   assert_param(IS_OB_WRP_SECTOR(WRPSector));
   assert_param(IS_FLASH_BANK(Banks));
+  UNUSED(Banks);
 
   /* Wait for last operation to be completed */
   status = FLASH_WaitForLastOperation((uint32_t)FLASH_TIMEOUT_VALUE);

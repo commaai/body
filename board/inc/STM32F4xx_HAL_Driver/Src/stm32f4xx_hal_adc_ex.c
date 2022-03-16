@@ -779,6 +779,7 @@ HAL_StatusTypeDef HAL_ADCEx_MultiModeStop_DMA(ADC_HandleTypeDef* hadc)
 uint32_t HAL_ADCEx_MultiModeGetValue(ADC_HandleTypeDef* hadc)
 {
   ADC_Common_TypeDef *tmpADC_Common;
+  UNUSED(hadc); // TODO: check if not breaks something!
 
   /* Pointer to the common control register to which is belonging hadc    */
   /* (Depending on STM32F4 product, there may be up to 3 ADC and 1 common */

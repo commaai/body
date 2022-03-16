@@ -137,7 +137,7 @@ for project_name in build_projects:
     "-Wall",
     "-Wextra",
     "-Wstrict-prototypes",
-    #"-Werror",
+    "-Werror",
     "-mlittle-endian",
     "-mthumb",
     "-nostdlib",
