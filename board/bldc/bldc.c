@@ -67,7 +67,7 @@ static uint8_t  buzzerIdx   = 0;
 uint8_t        enable       = 0;        // initially motors are disabled for SAFETY
 static uint8_t enableFin    = 0;
 
-static const uint16_t pwm_res  = 64000000 / 2 / PWM_FREQ; // = 2000
+static const uint16_t pwm_res  = 64000000 / 2 / PWM_FREQ; // = 2000 ; TODO: should change to SystemCoreClock ? Needs testing
 
 static uint16_t offsetcount = 0;
 static int16_t offsetrlA    = 2000;
@@ -80,9 +80,8 @@ static int16_t offsetdcr    = 2000;
 int16_t        batVoltage       = (400 * BAT_CELLS * BAT_CALIB_ADC) / BAT_CALIB_REAL_VOLTAGE;
 static int32_t batVoltageFixdt  = (400 * BAT_CELLS * BAT_CALIB_ADC) / BAT_CALIB_REAL_VOLTAGE << 16;  // Fixed-point filter output initialized at 400 V*100/cell = 4 V/cell converted to fixed-point
 
-// =================================
+
 // DMA interrupt frequency =~ 16 kHz
-// =================================
 void DMA2_Stream0_IRQHandler(void) {
   DMA2->LIFCR = DMA_LIFCR_CTCIF0;
 
@@ -156,7 +155,6 @@ void DMA2_Stream0_IRQHandler(void) {
   int ur, vr, wr;
   static boolean_T OverrunFlag = false;
 
-  /* Check for overrun */
   if (OverrunFlag) {
     return;
   }
@@ -166,12 +164,10 @@ void DMA2_Stream0_IRQHandler(void) {
   enableFin = enable && !rtY_Left.z_errCode && !rtY_Right.z_errCode;
 
   // ========================= LEFT MOTOR ============================
-    // Get hall sensors values
     uint8_t hall_ul = !(LEFT_HALL_U_PORT->IDR & LEFT_HALL_U_PIN);
     uint8_t hall_vl = !(LEFT_HALL_V_PORT->IDR & LEFT_HALL_V_PIN);
     uint8_t hall_wl = !(LEFT_HALL_W_PORT->IDR & LEFT_HALL_W_PIN);
 
-    /* Set motor inputs here */
     rtU_Left.b_motEna     = enableFin;
     rtU_Left.z_ctrlModReq = ctrlModReq;
     rtU_Left.r_inpTgt     = pwml;
@@ -181,20 +177,14 @@ void DMA2_Stream0_IRQHandler(void) {
     rtU_Left.i_phaAB      = curL_phaA;
     rtU_Left.i_phaBC      = curL_phaB;
     rtU_Left.i_DCLink     = curL_DC;
-    // rtU_Left.a_mechAngle   = ...; // Angle input in DEGREES [0,360] in fixdt(1,16,4) data type. If `angle` is float use `= (int16_t)floor(angle * 16.0F)` If `angle` is integer use `= (int16_t)(angle << 4)`
 
-    /* Step the controller */
     #ifdef MOTOR_LEFT_ENA
     BLDC_controller_step(rtM_Left);
     #endif
 
-    /* Get motor outputs here */
     ul            = rtY_Left.DC_phaA;
     vl            = rtY_Left.DC_phaB;
     wl            = rtY_Left.DC_phaC;
-  // errCodeLeft  = rtY_Left.z_errCode;
-  // motSpeedLeft = rtY_Left.n_mot;
-  // motAngleLeft = rtY_Left.a_elecAngle;
 
     /* Apply commands */
     LEFT_TIM->LEFT_TIM_U    = (uint16_t)CLAMP(ul + pwm_res / 2, pwm_margin, pwm_res-pwm_margin);
@@ -204,12 +194,10 @@ void DMA2_Stream0_IRQHandler(void) {
 
 
   // ========================= RIGHT MOTOR ===========================
-    // Get hall sensors values
     uint8_t hall_ur = !(RIGHT_HALL_U_PORT->IDR & RIGHT_HALL_U_PIN);
     uint8_t hall_vr = !(RIGHT_HALL_V_PORT->IDR & RIGHT_HALL_V_PIN);
     uint8_t hall_wr = !(RIGHT_HALL_W_PORT->IDR & RIGHT_HALL_W_PIN);
 
-    /* Set motor inputs here */
     rtU_Right.b_motEna      = enableFin;
     rtU_Right.z_ctrlModReq  = ctrlModReq;
     rtU_Right.r_inpTgt      = pwmr;
@@ -219,20 +207,14 @@ void DMA2_Stream0_IRQHandler(void) {
     rtU_Right.i_phaAB       = curR_phaB;
     rtU_Right.i_phaBC       = curR_phaC;
     rtU_Right.i_DCLink      = curR_DC;
-    // rtU_Right.a_mechAngle   = ...; // Angle input in DEGREES [0,360] in fixdt(1,16,4) data type. If `angle` is float use `= (int16_t)floor(angle * 16.0F)` If `angle` is integer use `= (int16_t)(angle << 4)`
 
-    /* Step the controller */
     #ifdef MOTOR_RIGHT_ENA
     BLDC_controller_step(rtM_Right);
     #endif
 
-    /* Get motor outputs here */
     ur            = rtY_Right.DC_phaA;
     vr            = rtY_Right.DC_phaB;
     wr            = rtY_Right.DC_phaC;
- // errCodeRight  = rtY_Right.z_errCode;
- // motSpeedRight = rtY_Right.n_mot;
- // motAngleRight = rtY_Right.a_elecAngle;
 
     /* Apply commands */
     RIGHT_TIM->RIGHT_TIM_U  = (uint16_t)CLAMP(ur + pwm_res / 2, pwm_margin, pwm_res-pwm_margin);
@@ -240,9 +222,5 @@ void DMA2_Stream0_IRQHandler(void) {
     RIGHT_TIM->RIGHT_TIM_W  = (uint16_t)CLAMP(wr + pwm_res / 2, pwm_margin, pwm_res-pwm_margin);
   // =================================================================
 
-  /* Indicate task complete */
   OverrunFlag = false;
-
- // ###############################################################################
-
 }
