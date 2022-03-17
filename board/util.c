@@ -15,7 +15,7 @@ extern uint8_t buzzerCount;             // global variable for the buzzer counts
 extern uint8_t buzzerFreq;              // global variable for the buzzer pitch. can be 1, 2, 3, 4, 5, 6, 7...
 extern uint8_t buzzerPattern;           // global variable for the buzzer pattern. can be 1, 2, 3, 4, 5, 6, 7...
 
-extern uint8_t enable;                  // global variable for motor enable
+extern uint8_t enable_motors;                  // global variable for motor enable
 extern uint8_t ignition;                // global variable for ignition on SBU2 line
 
 //------------------------------------------------------------------------
@@ -78,6 +78,29 @@ void BLDC_Init(void) {
   BLDC_controller_initialize(rtM_Right);
 }
 
+void out_enable(uint8_t led, bool enabled) {
+  switch(led) {
+    case LED_RED:
+      HAL_GPIO_WritePin(LED_RED_PORT, LED_RED_PIN, !enabled);
+      break;
+    case LED_GREEN:
+      HAL_GPIO_WritePin(LED_GREEN_PORT, LED_GREEN_PIN, !enabled);
+      break;
+    case LED_BLUE:
+      HAL_GPIO_WritePin(LED_BLUE_PORT, LED_BLUE_PIN, !enabled);
+      break;
+    case IGNITION:
+      HAL_GPIO_WritePin(IGNITION_PORT, IGNITION_PIN, enabled);
+      break;
+    case POWERSWITCH:
+      HAL_GPIO_WritePin(OFF_PORT, OFF_PIN, enabled);
+      break;
+    case TRANSCEIVER:
+      HAL_GPIO_WritePin(CAN_STBY_PORT, CAN_STBY_PIN, !enabled);
+      break;
+  }
+}
+
 void poweronMelody(void) {
     buzzerCount = 0;
     for (int i = 8; i >= 0; i--) {
@@ -131,14 +154,14 @@ void calcAvgSpeed(void) {
 }
 
 void poweroff(void) {
-  enable = 0;
+  enable_motors = 0;
   buzzerCount = 0;
   buzzerPattern = 0;
   for (int i = 0; i < 8; i++) {
     buzzerFreq = (uint8_t)i;
     HAL_Delay(100);
   }
-  HAL_GPIO_WritePin(OFF_PORT, OFF_PIN, GPIO_PIN_RESET);
+  out_enable(POWERSWITCH, true);
   while(1) {
     // Temporarily, to see that we went to power off but can't switch the latch
     HAL_GPIO_TogglePin(LED_RED_PORT, LED_RED_PIN);

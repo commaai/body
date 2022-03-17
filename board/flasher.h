@@ -1,7 +1,3 @@
-#include "drivers/llbxcan.h"
-#include "drivers/llflash.h"
-#include "provision.h"
-
 typedef union {
   uint16_t w;
   struct BW {
@@ -57,7 +53,7 @@ int can_control_msg(USB_Setup_TypeDef *setup, uint8_t *resp) {
         flash_unlock();
         resp[1] = 0xff;
       }
-      HAL_GPIO_WritePin(LED_GREEN_PORT, LED_GREEN_PIN, GPIO_PIN_RESET);
+      out_enable(LED_GREEN, true);
       unlocked = true;
       prog_ptr = (uint32_t *)APP_START_ADDRESS;
       break;
@@ -103,12 +99,12 @@ int can_control_msg(USB_Setup_TypeDef *setup, uint8_t *resp) {
 }
 
 void flash_data(void *data, int len) {
-  HAL_GPIO_WritePin(LED_RED_PORT, LED_RED_PIN, GPIO_PIN_SET);
+  out_enable(LED_RED, false);
   for (int i = 0; i < len/4; i++) {
     flash_write_word(prog_ptr, *(uint32_t*)(data+(i*4)));
     prog_ptr++;
   }
-  HAL_GPIO_WritePin(LED_RED_PORT, LED_RED_PIN, GPIO_PIN_RESET);
+  out_enable(LED_RED, true);
 }
 
 int prep_data(uint8_t *data, uint8_t *data_out) {
@@ -241,7 +237,7 @@ void soft_flasher_start(void) {
 
   enter_bootloader_mode = 0;
 
-  HAL_GPIO_WritePin(CAN_STBY_PORT, CAN_STBY_PIN, GPIO_PIN_RESET); // Enable transceiver by pulling STBY pin LOW (Normal mode)
+  out_enable(TRANSCEIVER, true);
 
   __HAL_RCC_CAN1_CLK_ENABLE(); // Also needed for CAN2, dumb...
   __HAL_RCC_CAN2_CLK_ENABLE();
@@ -251,15 +247,15 @@ void soft_flasher_start(void) {
   llcan_init(CAN);
 
   // green LED on for flashing
-  HAL_GPIO_WritePin(LED_GREEN_PORT, LED_GREEN_PIN, GPIO_PIN_RESET);
+  out_enable(LED_GREEN, true);
 
   uint64_t cnt = 0;
 
   for (cnt=0;;cnt++) {
     // blink the green LED fast
-    HAL_GPIO_WritePin(LED_GREEN_PORT, LED_GREEN_PIN, GPIO_PIN_SET);
+    out_enable(LED_GREEN, false);
     delay(500000);
-    HAL_GPIO_WritePin(LED_GREEN_PORT, LED_GREEN_PIN, GPIO_PIN_RESET);
+    out_enable(LED_GREEN, true);
     delay(500000);
   }
 }

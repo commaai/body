@@ -75,6 +75,7 @@ c_bstub_sources = [
   ["hal", "inc/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal.c"],
   ["system", "inc/system_stm32f4xx.c"],
   ["it", "inc/stm32f4xx_it.c"],
+  ["util", "util.c"],
 ]
 
 def get_version(builder, build_type):

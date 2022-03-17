@@ -19,6 +19,11 @@
 #include "obj/cert.h"
 #include "obj/gitversion.h"
 
+#include "drivers/llbxcan.h"
+#include "drivers/llflash.h"
+#include "provision.h"
+#include "util.h"
+
 #include "flasher.h"
 
 void __initialize_hardware_early(void) {
@@ -46,10 +51,10 @@ int main(void) {
   SystemClock_Config();
   MX_GPIO_Init();
 
-  HAL_GPIO_WritePin(OFF_PORT, OFF_PIN, GPIO_PIN_SET);   // Activate Latch
-  HAL_GPIO_WritePin(LED_RED_PORT, LED_RED_PIN, GPIO_PIN_SET);
-  HAL_GPIO_WritePin(LED_GREEN_PORT, LED_GREEN_PIN, GPIO_PIN_SET);
-  HAL_GPIO_WritePin(LED_BLUE_PORT, LED_BLUE_PIN, GPIO_PIN_SET);
+  out_enable(POWERSWITCH, true);
+  out_enable(LED_RED, false);
+  out_enable(LED_GREEN, false);
+  out_enable(LED_BLUE, false);
 
   if (enter_bootloader_mode == ENTER_SOFTLOADER_MAGIC) {
     enter_bootloader_mode = 0;

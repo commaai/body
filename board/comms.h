@@ -141,7 +141,7 @@ void CAN2_RX0_IRQHandler(void) {
     } else if ((address == BROADCAST_ADDR) || (address == FALLBACK_ADDR) || (address == ECU_ADDR)) { // Process UBS and OBD2 requests
       process_ubs(address, GET_MAILBOX_BYTES_04(&CAN2->sFIFOMailBox[0]));
     }
-    HAL_GPIO_WritePin(LED_BLUE_PORT, LED_BLUE_PIN, GPIO_PIN_RESET);
+    out_enable(LED_BLUE, true);
     // next
     CAN2->RF0R |= CAN_RF0R_RFOM0;
   }

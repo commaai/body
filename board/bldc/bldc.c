@@ -64,7 +64,7 @@ volatile uint32_t buzzerTimer = 0;
 static uint8_t  buzzerPrev  = 0;
 static uint8_t  buzzerIdx   = 0;
 
-uint8_t        enable       = 0;        // initially motors are disabled for SAFETY
+uint8_t        enable_motors = 0;        // initially motors are disabled for SAFETY
 static uint8_t enableFin    = 0;
 
 static const uint16_t pwm_res  = 64000000 / 2 / PWM_FREQ; // = 2000 ; TODO: should change to SystemCoreClock ? Needs testing
@@ -113,13 +113,13 @@ void DMA2_Stream0_IRQHandler(void) {
 
   // Disable PWM when current limit is reached (current chopping)
   // This is the Level 2 of current protection. The Level 1 should kick in first given by I_MOT_MAX
-  if(ABS(curL_DC) > curDC_max || enable == 0) {
+  if(ABS(curL_DC) > curDC_max || enable_motors == 0) {
     LEFT_TIM->BDTR &= ~TIM_BDTR_MOE;
   } else {
     LEFT_TIM->BDTR |= TIM_BDTR_MOE;
   }
 
-  if(ABS(curR_DC)  > curDC_max || enable == 0) {
+  if(ABS(curR_DC)  > curDC_max || enable_motors == 0) {
     RIGHT_TIM->BDTR &= ~TIM_BDTR_MOE;
   } else {
     RIGHT_TIM->BDTR |= TIM_BDTR_MOE;
@@ -161,7 +161,7 @@ void DMA2_Stream0_IRQHandler(void) {
   OverrunFlag = true;
 
   /* Make sure to stop BOTH motors in case of an error */
-  enableFin = enable && !rtY_Left.z_errCode && !rtY_Right.z_errCode;
+  enableFin = enable_motors && !rtY_Left.z_errCode && !rtY_Right.z_errCode;
 
   // ========================= LEFT MOTOR ============================
     uint8_t hall_ul = !(LEFT_HALL_U_PORT->IDR & LEFT_HALL_U_PIN);

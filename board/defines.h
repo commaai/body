@@ -142,6 +142,13 @@
 
 #define COMPILE_TIME_ASSERT(pred) ((void)sizeof(char[1 - (2 * ((int)(!(pred))))]))
 
+#define LED_RED     0
+#define LED_GREEN   1
+#define LED_BLUE    2
+#define IGNITION    3
+#define POWERSWITCH 4
+#define TRANSCEIVER 5
+
 typedef struct {
   uint32_t rrB;
   uint32_t rrC;

@@ -42,7 +42,7 @@ extern int16_t speedAvgAbs;             // Average measured speed in absolute
 extern volatile int pwml;               // global variable for pwm left. -1000 to 1000
 extern volatile int pwmr;               // global variable for pwm right. -1000 to 1000
 
-extern uint8_t enable;                  // global variable for motor enable
+extern uint8_t enable_motors;                  // global variable for motor enable
 
 extern int16_t batVoltage;              // global variable for battery voltage
 
@@ -65,6 +65,7 @@ static uint32_t buzzerTimer_prev = 0;
 
 const uint8_t crc_poly = 0xD5U;  // standard crc8
 
+
 int main(void) {
   HAL_Init();
   HAL_NVIC_SetPriorityGrouping(NVIC_PRIORITYGROUP_4);
@@ -86,22 +87,21 @@ int main(void) {
 
   HAL_ADC_Start(&hadc);
 
-  HAL_GPIO_WritePin(OFF_PORT, OFF_PIN, GPIO_PIN_SET);   // Activate Latch
-
-  HAL_GPIO_WritePin(IGNITION_PORT, IGNITION_PIN, GPIO_PIN_SET); // Set ignition pin HIGH (ON)
-  HAL_GPIO_WritePin(CAN_STBY_PORT, CAN_STBY_PIN, GPIO_PIN_RESET); // Enable transceiver by pulling STBY pin LOW (Normal mode)
+  out_enable(POWERSWITCH, true);
+  out_enable(IGNITION, true);
+  out_enable(TRANSCEIVER, true);
 
   // Reset LEDs upon startup
-  HAL_GPIO_WritePin(LED_RED_PORT, LED_RED_PIN, GPIO_PIN_SET);
-  HAL_GPIO_WritePin(LED_GREEN_PORT, LED_GREEN_PIN, GPIO_PIN_SET);
-  HAL_GPIO_WritePin(LED_BLUE_PORT, LED_BLUE_PIN, GPIO_PIN_SET);
+  out_enable(LED_RED, false);
+  out_enable(LED_GREEN, false);
+  out_enable(LED_BLUE, false);
 
   __HAL_RCC_CAN1_CLK_ENABLE(); // Also needed for CAN2, dumb...
   __HAL_RCC_CAN2_CLK_ENABLE();
   llcan_set_speed(CAN2, 5000, false, false);
   llcan_init(CAN2);
 
-  poweronMelody();
+  //poweronMelody();
 
   ignition = 1;
 
@@ -117,22 +117,22 @@ int main(void) {
 
     if (ignition == 0) {
       cmdL = cmdR = 0;
-      enable = 0;
+      enable_motors = 0;
     }
-    if (!enable) {
+    if (!enable_motors) {
       cmdL = 0;
       cmdR = 0;
     }
 
-    if (ignition == 1 && enable == 0 && (!rtY_Left.z_errCode && !rtY_Right.z_errCode) && (ABS(cmdL) < 50 && ABS(cmdR) < 50)) {
-      beepShort(6); // make 2 beeps indicating the motor enable
-      beepShort(4);
+    if (ignition == 1 && enable_motors == 0 && (!rtY_Left.z_errCode && !rtY_Right.z_errCode) && (ABS(cmdL) < 50 && ABS(cmdR) < 50)) {
+     // beepShort(6); // make 2 beeps indicating the motor enable
+      //beepShort(4);
       HAL_Delay(100);
       cmdL = cmdR = 0;
-      enable = 1; // enable motors
+      enable_motors = 1; // enable motors
     }
 
-    HAL_GPIO_WritePin(LED_GREEN_PORT, LED_GREEN_PIN, !ignition);
+    out_enable(LED_GREEN, ignition);
 
     pwml = CLAMP((int)cmdL, -1000, 1000);
     pwmr = -CLAMP((int)cmdR, -1000, 1000);
@@ -146,29 +146,45 @@ int main(void) {
     batVoltageCalib = batVoltage * BAT_CALIB_REAL_VOLTAGE / BAT_CALIB_ADC;
 
     if (main_loop_counter % 2 == 0) { // runs at ~100Hz
-      uint8_t dat[8];
-      uint16_t speedL = rtY_Left.n_mot;
-      uint16_t speedR = -(rtY_Right.n_mot); // Invert speed sign for the right wheel
-      dat[0] = (speedL >> 8U) & 0xFFU;
-      dat[1] = speedL & 0xFFU;
-      dat[2] = (speedR >> 8U) & 0xFFU;
-      dat[3] = speedR & 0xFFU;
-      dat[4] = rtY_Left.a_elecAngle;
-      dat[5] = rtY_Right.a_elecAngle;
-      dat[6] = (batVoltageCalib >> 8U) & 0xFFU;
-      dat[7] = batVoltageCalib & 0xFFU;
+      if (ignition) { // Send msg only with ignition on
+        uint8_t dat[8];
+        uint16_t speedL = rtY_Left.n_mot;
+        uint16_t speedR = -(rtY_Right.n_mot); // Invert speed sign for the right wheel
+        dat[0] = (speedL >> 8U) & 0xFFU;
+        dat[1] = speedL & 0xFFU;
+        dat[2] = (speedR >> 8U) & 0xFFU;
+        dat[3] = speedR & 0xFFU;
+        dat[4] = rtY_Left.a_elecAngle;
+        dat[5] = rtY_Right.a_elecAngle;
+        dat[6] = rtY_Left.z_errCode;
+        dat[7] = rtY_Right.z_errCode;
 
-      // Calibrate chip temp
-      // dat[4] = (board_temp_adcFilt >> 8U) & 0xFFU;
-      // dat[5] = board_temp_adcFilt & 0xFFU;
-      // dat[6] = (board_temp_deg_c >> 8U) & 0xFFU;
-      // dat[7] = board_temp_deg_c & 0xFFU;
+        // speed_L(2), speed_R(2), hall_angle_L(1), hall_angle_R(1), left mot error(1), right motor error(1)
+        can_send_msg(0x201U, ((dat[7] << 24U) | (dat[6] << 16U) | (dat[5]<< 8U) | dat[4]), ((dat[3] << 24U) | (dat[2] << 16U) | (dat[1] << 8U) | dat[0]), 8U);
+      }
+    }
 
-      can_send_msg(0x201U, ((dat[7] << 24U) | (dat[6] << 16U) | (dat[5]<< 8U) | dat[4]), ((dat[3] << 24U) | (dat[2] << 16U) | (dat[1] << 8U) | dat[0]), 8U);
+    if (main_loop_counter % 20 == 0) { // Runs at ~10Hz
+      uint8_t dat[2];
+      dat[0] = ignition;
+      dat[1] = enable_motors;
+
+      // ignition(1), enable_motors(1)
+      can_send_msg(0x202U, 0x0U, ((dat[1] << 8U) | dat[0]), 2U);
     }
 
     if (main_loop_counter % 200 == 0) { // Runs at ~1Hz
-      HAL_GPIO_WritePin(LED_BLUE_PORT, LED_BLUE_PIN, GPIO_PIN_SET);
+      uint8_t dat[4];
+      dat[0] = (board_temp_deg_c >> 8U) & 0xFFU;
+      dat[1] = board_temp_deg_c & 0xFFU;
+      dat[2] = (batVoltageCalib >> 8U) & 0xFFU;
+      dat[3] = batVoltageCalib & 0xFFU;
+
+      // MCU temp(2), battery voltage(2)
+      can_send_msg(0x203U, 0x0U, ((dat[3] << 24U) | (dat[2] << 16U) | (dat[1] << 8U) | dat[0]), 4U);
+
+      // Reset LED after CAN RX
+      out_enable(LED_BLUE, false);
     }
 
     poweroffPressCheck();
@@ -176,7 +192,7 @@ int main(void) {
     if ((TEMP_POWEROFF_ENABLE && board_temp_deg_c >= TEMP_POWEROFF && speedAvgAbs < 20) || (batVoltage < BAT_DEAD && speedAvgAbs < 20)) {  // poweroff before mainboard burns OR low bat 3
       poweroff();
     } else if (rtY_Left.z_errCode || rtY_Right.z_errCode) {                                           // 1 beep (low pitch): Motor error, disable motors
-      enable = 0;
+      enable_motors = 0;
       beepCount(1, 24, 1);
     } else if (TEMP_WARNING_ENABLE && board_temp_deg_c >= TEMP_WARNING) {                             // 5 beeps (low pitch): Mainboard temperature warning
       beepCount(5, 24, 1);
