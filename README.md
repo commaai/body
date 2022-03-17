@@ -1,5 +1,8 @@
-Compile:
-make clean && make
+Flash bootstub and app:
+./recover.sh
 
-Flash:
-openocd -f interface/stlink.cfg -c "set CPUTAPID 0" -f target/stm32f4x.cfg -c init -c "reset halt" -c "flash write_image erase obj/body.hex 0 ihex" -c "reset run" -c "shutdown"
+Flash app through CAN bus with panda:
+./flash_can.sh
+
+Compile:
+scons
