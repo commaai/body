@@ -91,6 +91,7 @@ int main(void) {
   HAL_GPIO_WritePin(IGNITION_PORT, IGNITION_PIN, GPIO_PIN_SET); // Set ignition pin HIGH (ON)
   HAL_GPIO_WritePin(CAN_STBY_PORT, CAN_STBY_PIN, GPIO_PIN_RESET); // Enable transceiver by pulling STBY pin LOW (Normal mode)
 
+  // Reset LEDs upon startup
   HAL_GPIO_WritePin(LED_RED_PORT, LED_RED_PIN, GPIO_PIN_SET);
   HAL_GPIO_WritePin(LED_GREEN_PORT, LED_GREEN_PIN, GPIO_PIN_SET);
   HAL_GPIO_WritePin(LED_BLUE_PORT, LED_BLUE_PIN, GPIO_PIN_SET);
@@ -112,20 +113,15 @@ int main(void) {
 
   while(1) {
     if (buzzerTimer - buzzerTimer_prev > 16*DELAY_IN_MAIN_LOOP) {   // 1 ms = 16 ticks buzzerTimer
-
-    if (!enable) {
-      cmdL = 0;
-      cmdR = 0;
-    } else {
-      // To test motors without CAN bus commands, REMOVE
-      cmdL = 49;
-      cmdR = 49;
-    }
     calcAvgSpeed();
 
     if (ignition == 0) {
       cmdL = cmdR = 0;
       enable = 0;
+    }
+    if (!enable) {
+      cmdL = 0;
+      cmdR = 0;
     }
 
     if (ignition == 1 && enable == 0 && (!rtY_Left.z_errCode && !rtY_Right.z_errCode) && (ABS(cmdL) < 50 && ABS(cmdR) < 50)) {
@@ -161,6 +157,12 @@ int main(void) {
       dat[5] = rtY_Right.a_elecAngle;
       dat[6] = (batVoltageCalib >> 8U) & 0xFFU;
       dat[7] = batVoltageCalib & 0xFFU;
+
+      // Calibrate chip temp
+      // dat[4] = (board_temp_adcFilt >> 8U) & 0xFFU;
+      // dat[5] = board_temp_adcFilt & 0xFFU;
+      // dat[6] = (board_temp_deg_c >> 8U) & 0xFFU;
+      // dat[7] = board_temp_deg_c & 0xFFU;
 
       can_send_msg(0x201U, ((dat[7] << 24U) | (dat[6] << 16U) | (dat[5]<< 8U) | dat[4]), ((dat[3] << 24U) | (dat[2] << 16U) | (dat[1] << 8U) | dat[0]), 8U);
     }
