@@ -101,7 +101,7 @@ int main(void) {
   llcan_set_speed(CAN2, 5000, false, false);
   llcan_init(CAN2);
 
-  //poweronMelody();
+  poweronMelody();
 
   ignition = 1;
 
@@ -125,8 +125,8 @@ int main(void) {
     }
 
     if (ignition == 1 && enable_motors == 0 && (!rtY_Left.z_errCode && !rtY_Right.z_errCode) && (ABS(cmdL) < 50 && ABS(cmdR) < 50)) {
-     // beepShort(6); // make 2 beeps indicating the motor enable
-      //beepShort(4);
+      beepShort(6); // make 2 beeps indicating the motor enable
+      beepShort(4);
       HAL_Delay(100);
       cmdL = cmdR = 0;
       enable_motors = 1; // enable motors
