@@ -29,15 +29,15 @@ if __name__ == "__main__":
       break
 
   if args.recover:
-    p.can_send(0x200, b"\xce\xfa\xad\xde\x1e\x0b\xb0\x02", 1)
+    p.can_send(0x200, b"\xce\xfa\xad\xde\x1e\x0b\xb0\x02", 0)
     exit(0)
   else:
-    p.can_send(0x200, b"\xce\xfa\xad\xde\x1e\x0b\xb0\x0a", 1)
+    p.can_send(0x200, b"\xce\xfa\xad\xde\x1e\x0b\xb0\x0a", 0)
 
   if args.fn:
     time.sleep(0.1)
     print("flashing", args.fn)
     code = open(args.fn, "rb").read()
-    Panda.flash_static(CanHandle(p, 1), code)
+    Panda.flash_static(CanHandle(p, 0), code)
 
   print("can flash done")
