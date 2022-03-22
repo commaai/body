@@ -5,7 +5,7 @@
 
 // ********************* Includes *********************
 #include <stdbool.h>
-#include <stdio.h>
+#include <stdint.h>
 #include "libc.h"
 #include "stm32f4xx_hal.h"
 #include "defines.h"
