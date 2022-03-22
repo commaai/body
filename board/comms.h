@@ -63,10 +63,10 @@ void process_ubs(uint32_t addr, uint32_t dlr) {
       case 0x031002U:
         can_send_msg(ECU_R_ADDR, 0x0U, 0x035002U, 8U);
         break;
-      // ECU MANUFACTURING DATE : F18B
-      case 0x8BF12203U:
-        can_send_msg(ECU_R_ADDR, 0x2F32308BU, 0xF1620D10U, 8U);
-        uds_request = 0xF18BU;
+      // APPLICATION SOFTWARE IDENTIFICATION : F181
+      case 0x81F12203U:
+        can_send_msg(ECU_R_ADDR, 0x2F323081U, 0xF1620D10U, 8U);
+        uds_request = 0xF181U;
         break;
       // ECU SERIAL NUMBER : F18C
       case 0x8CF12203U:
@@ -87,8 +87,8 @@ void process_ubs(uint32_t addr, uint32_t dlr) {
       // FLOW CONTROL MESSAGE
       case 0x30U:
         switch(uds_request) {
-          // ECU MANUFACTURING DATE : F18B
-          case 0xF18B:
+          // APPLICATION SOFTWARE IDENTIFICATION : F181
+          case 0xF181:
             can_send_msg(ECU_R_ADDR, 0x32323032U, 0x2F373221U, 8U);
             uds_request = 0;
             break;
