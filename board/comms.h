@@ -15,6 +15,7 @@ extern int16_t cmdL;                    // global variable for Left Command
 extern int16_t cmdR;                    // global variable for Right Command
 
 extern uint32_t enter_bootloader_mode;
+extern volatile uint32_t torque_cmd_timeout;
 
 uint8_t uid[10];
 uint32_t uds_request = 0;
@@ -137,6 +138,7 @@ void CAN2_RX0_IRQHandler(void) {
       }
       cmdL = ((dat[0] << 8U) | dat[1]);
       cmdR = ((dat[2] << 8U) | dat[3]);
+      torque_cmd_timeout = 0;
 
     } else if ((address == BROADCAST_ADDR) || (address == FALLBACK_ADDR) || (address == ECU_ADDR)) { // Process UBS and OBD2 requests
       process_ubs(address, GET_MAILBOX_BYTES_04(&CAN2->sFIFOMailBox[0]));
