@@ -127,7 +127,7 @@ void CAN2_SCE_IRQHandler(void) {
 void CAN2_RX0_IRQHandler(void) {
   while ((CAN2->RF0R & CAN_RF0R_FMP0) != 0) {
     int address = CAN2->sFIFOMailBox[0].RIR >> 21;
-    if (address == 0x200U) {
+    if (address == 0x250U) {
       if ((GET_MAILBOX_BYTES_04(&CAN2->sFIFOMailBox[0]) == 0xdeadface) && (GET_MAILBOX_BYTES_48(&CAN2->sFIFOMailBox[0]) == 0x0ab00b1e)) {
         enter_bootloader_mode = ENTER_SOFTLOADER_MAGIC;
         NVIC_SystemReset();
