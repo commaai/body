@@ -58,6 +58,7 @@ int16_t cmdL;                    // global variable for Left Command
 int16_t cmdR;                    // global variable for Right Command
 
 uint8_t ignition;                // global variable for ignition on SBU2 line
+bool forward = true;
 
 //------------------------------------------------------------------------
 // Local variables
@@ -102,7 +103,13 @@ int main(void) {
   llcan_set_speed(CAN2, 5000, false, false);
   llcan_init(CAN2);
 
+  out_enable(LED_GREEN, true);
   poweronMelody();
+  out_enable(LED_GREEN, false);
+  poweronMelody();
+  out_enable(LED_GREEN, true);
+  poweronMelody();
+  out_enable(LED_GREEN, false);
 
   ignition = 1;
 
@@ -120,7 +127,7 @@ int main(void) {
         cmdL = cmdR = 0;
         enable_motors = 0;
       }
-      if (!enable_motors || (torque_cmd_timeout > 20)) {
+      if (!enable_motors) {
         cmdL = 0;
         cmdR = 0;
       }
@@ -133,7 +140,25 @@ int main(void) {
         enable_motors = 1; // enable motors
       }
 
-      out_enable(LED_GREEN, ignition);
+      if (cmdL >= 1000) {
+        forward = false;
+      } else if (cmdL <= -1000) {
+        forward = true;
+      }
+
+      if (main_loop_counter % 20 == 0) { // 10Hz
+        if (forward) {
+          out_enable(LED_BLUE, true);
+          out_enable(LED_RED, false);
+          cmdL += 100;
+          cmdR += 100;
+        } else {
+          out_enable(LED_RED, true);
+          out_enable(LED_BLUE, false);
+          cmdL -= 100;
+          cmdR -= 100;
+        }
+      }
 
       pwml = CLAMP((int)cmdL, -1000, 1000);
       pwmr = -CLAMP((int)cmdR, -1000, 1000);
@@ -146,34 +171,6 @@ int main(void) {
       // ####### CALC CALIBRATED BATTERY VOLTAGE #######
       batVoltageCalib = batVoltage * BAT_CALIB_REAL_VOLTAGE / BAT_CALIB_ADC;
 
-      if (main_loop_counter % 2 == 0) { // runs at ~100Hz
-        if (ignition) { // Send msg only with ignition on
-          uint8_t dat[8];
-          uint16_t speedL = rtY_Left.n_mot;
-          uint16_t speedR = -(rtY_Right.n_mot); // Invert speed sign for the right wheel
-          dat[0] = (speedL >> 8U) & 0xFFU;
-          dat[1] = speedL & 0xFFU;
-          dat[2] = (speedR >> 8U) & 0xFFU;
-          dat[3] = speedR & 0xFFU;
-          dat[4] = rtY_Left.a_elecAngle;
-          dat[5] = rtY_Right.a_elecAngle;
-          dat[6] = rtY_Left.z_errCode;
-          dat[7] = rtY_Right.z_errCode;
-
-          // speed_L(2), speed_R(2), hall_angle_L(1), hall_angle_R(1), left mot error(1), right motor error(1)
-          can_send_msg(0x201U, ((dat[7] << 24U) | (dat[6] << 16U) | (dat[5]<< 8U) | dat[4]), ((dat[3] << 24U) | (dat[2] << 16U) | (dat[1] << 8U) | dat[0]), 8U);
-        }
-      }
-
-      if (main_loop_counter % 20 == 0) { // Runs at ~10Hz
-        uint8_t dat[2];
-        dat[0] = ignition;
-        dat[1] = enable_motors;
-
-        // ignition(1), enable_motors(1)
-        can_send_msg(0x202U, 0x0U, ((dat[1] << 8U) | dat[0]), 2U);
-      }
-
       if (main_loop_counter % 200 == 0) { // Runs at ~1Hz
         uint8_t dat[4];
         dat[0] = (board_temp_deg_c >> 8U) & 0xFFU;
@@ -183,9 +180,6 @@ int main(void) {
 
         // MCU temp(2), battery voltage(2)
         can_send_msg(0x203U, 0x0U, ((dat[3] << 24U) | (dat[2] << 16U) | (dat[1] << 8U) | dat[0]), 4U);
-
-        // Reset LED after CAN RX
-        out_enable(LED_BLUE, false);
       }
 
       poweroffPressCheck();
