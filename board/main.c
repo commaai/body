@@ -104,7 +104,7 @@ int main(void) {
 
   poweronMelody();
 
-  ignition = 1;
+  ignition = 0;
 
   int32_t board_temp_adcFixdt = adc_buffer.temp << 16;  // Fixed-point filter output initialized with current ADC converted to fixed-point
   int16_t board_temp_adcFilt  = adc_buffer.temp;
@@ -132,8 +132,6 @@ int main(void) {
         cmdL = cmdR = 0;
         enable_motors = 1; // enable motors
       }
-
-      out_enable(LED_GREEN, ignition);
 
       pwml = CLAMP((int)cmdL, -1000, 1000);
       pwmr = -CLAMP((int)cmdR, -1000, 1000);
@@ -172,6 +170,8 @@ int main(void) {
 
         // ignition(1), enable_motors(1)
         can_send_msg(0x202U, 0x0U, ((dat[1] << 8U) | dat[0]), 2U);
+
+        out_enable(LED_GREEN, ignition);
       }
 
       if (main_loop_counter % 200 == 0) { // Runs at ~1Hz
@@ -186,20 +186,23 @@ int main(void) {
 
         // Reset LED after CAN RX
         out_enable(LED_BLUE, false);
+        // Always use LED to show that body is on
+        out_enable(LED_GREEN, true);
       }
 
       poweroffPressCheck();
 
       if ((TEMP_POWEROFF_ENABLE && board_temp_deg_c >= TEMP_POWEROFF && speedAvgAbs < 20) || (batVoltage < BAT_DEAD && speedAvgAbs < 20)) {  // poweroff before mainboard burns OR low bat 3
         poweroff();
-      } else if (rtY_Left.z_errCode || rtY_Right.z_errCode) {                                           // 1 beep (low pitch): Motor error, disable motors
+      } else if (rtY_Left.z_errCode || rtY_Right.z_errCode) { // 1 beep (low pitch): Motor error, disable motors
         enable_motors = 0;
         beepCount(1, 24, 1);
-      } else if (TEMP_WARNING_ENABLE && board_temp_deg_c >= TEMP_WARNING) {                             // 5 beeps (low pitch): Mainboard temperature warning
+      } else if (TEMP_WARNING_ENABLE && board_temp_deg_c >= TEMP_WARNING) { // 5 beeps (low pitch): Mainboard temperature warning
         beepCount(5, 24, 1);
-      } else if (BAT_LVL1_ENABLE && batVoltage < BAT_LVL1) {                                            // 1 beep fast (medium pitch): Low bat 1
+      } else if (batVoltage < BAT_LVL1) { // 1 beep fast (medium pitch): Low bat 1
         beepCount(0, 10, 6);
-      } else if (BAT_LVL2_ENABLE && batVoltage < BAT_LVL2) {                                            // 1 beep slow (medium pitch): Low bat 2
+        out_enable(LED_RED, true);
+      } else if (batVoltage < BAT_LVL2) { // 1 beep slow (medium pitch): Low bat 2
         beepCount(0, 10, 30);
       } else {  // do not beep
         beepCount(0, 0, 0);
