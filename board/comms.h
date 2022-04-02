@@ -64,11 +64,19 @@ void process_ubs(uint32_t addr, uint32_t dlr) {
       case 0x031002U:
         can_send_msg(ECU_R_ADDR, 0x0U, 0x035002U, 8U);
         break;
-      // APPLICATION SOFTWARE IDENTIFICATION : F181
+      // APPLICATION SOFTWARE IDENTIFICATION : F181 (used for fingerprinting, date of board revision)
       case 0x81F12203U:
         can_send_msg(ECU_R_ADDR, 0x2F323081U, 0xF1620D10U, 8U);
         uds_request = 0xF181U;
         break;
+
+      // VEHICLE_MANUFACTURER_ECU_SOFTWARE_VERSION_NUMBER : F189 (used for git hash)
+      case 0x89F12203U:
+        COMPILE_TIME_ASSERT(sizeof(gitversion) == 8U);
+        can_send_msg(ECU_R_ADDR, ((gitversion[2] << 24U) | (gitversion[1] << 16U) | (gitversion[0] << 8U) | 0x89U), 0xF1620B10U, 8U);
+        uds_request = 0xF189U;
+        break;
+
       // ECU SERIAL NUMBER : F18C
       case 0x8CF12203U:
         can_send_msg(ECU_R_ADDR, ((uid[2] << 24U) | (uid[1] << 16U) | (uid[0] << 8U) | 0x8CU), 0xF1620D10U, 8U);
@@ -91,6 +99,11 @@ void process_ubs(uint32_t addr, uint32_t dlr) {
           // APPLICATION SOFTWARE IDENTIFICATION : F181
           case 0xF181:
             can_send_msg(ECU_R_ADDR, 0x32323032U, 0x2F373221U, 8U);
+            uds_request = 0;
+            break;
+          // VEHICLE_MANUFACTURER_ECU_SOFTWARE_VERSION_NUMBER : F189
+          case 0xF189:
+            can_send_msg(ECU_R_ADDR, ((gitversion[7]<< 8U) | gitversion[6]), ((gitversion[5] << 24U) | (gitversion[4] << 16U) | (gitversion[3] << 8U) | 0x21U), 8U);
             uds_request = 0;
             break;
           // ECU SERIAL NUMBER : F18C
