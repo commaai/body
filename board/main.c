@@ -58,7 +58,7 @@ int16_t board_temp_deg_c;        // global variable for calibrated temperature i
 int16_t cmdL;                    // global variable for Left Command
 int16_t cmdR;                    // global variable for Right Command
 
-uint8_t ignition;                // global variable for ignition on SBU2 line
+uint8_t ignition = 0;                // global variable for ignition on SBU2 line
 
 //------------------------------------------------------------------------
 // Local variables
@@ -90,7 +90,7 @@ int main(void) {
   HAL_ADC_Start(&hadc);
 
   out_enable(POWERSWITCH, true);
-  out_enable(IGNITION, true);
+  out_enable(IGNITION, ignition);
   out_enable(TRANSCEIVER, true);
 
   // Reset LEDs upon startup
@@ -104,8 +104,6 @@ int main(void) {
   llcan_init(CAN2);
 
   poweronMelody();
-
-  ignition = 0;
 
   int32_t board_temp_adcFixdt = adc_buffer.temp << 16;  // Fixed-point filter output initialized with current ADC converted to fixed-point
   int16_t board_temp_adcFilt  = adc_buffer.temp;

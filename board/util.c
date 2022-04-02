@@ -177,8 +177,8 @@ void poweroffPressCheck(void) {
       if (cnt_press == 2 * 100) { poweroff(); }
     }
     if (cnt_press > 8) {
-      HAL_GPIO_TogglePin(IGNITION_PORT, IGNITION_PIN);
       ignition = !ignition;
+      out_enable(IGNITION, ignition);
       beepShort(5);
     }
   }
