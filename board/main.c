@@ -59,8 +59,8 @@ int16_t cmdL;                    // global variable for Left Command
 int16_t cmdR;                    // global variable for Right Command
 
 uint8_t ignition = 0;            // global variable for ignition on SBU2 line
-
-uint8_t pkt_idx = 0;                 // For CAN msg counter
+uint8_t fault_status = 0;        // fault status of the whole system
+uint8_t pkt_idx = 0;             // For CAN msg counter
 
 //------------------------------------------------------------------------
 // Local variables
@@ -167,14 +167,12 @@ int main(void) {
 
       if (main_loop_counter % 20 == 0) { // Runs at ~10Hz
         uint8_t dat[2];
-        dat[0] = ignition;
-        dat[1] = enable_motors;
+        dat[0] = (((fault_status & 0x3F) << 2U) | (enable_motors << 1U) | ignition);
         dat[2] = rtY_Left.z_errCode;
         dat[3] = rtY_Right.z_errCode;
-        dat[4] = 0U; // Placeholder for fault status, TODO
 
         // ignition(1), enable_motors(1), left motor error(1), right motor error(1), global fault status(1)
-        can_send_msg(0x202U, dat[4], ((dat[3] << 24U) | (dat[2] << 16U) | (dat[1] << 8U) | dat[0]), 5U);
+        can_send_msg(0x202U, 0x0U, ((dat[2] << 16U) | (dat[1] << 8U) | dat[0]), 3U);
 
         out_enable(LED_GREEN, ignition);
       }
