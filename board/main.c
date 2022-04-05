@@ -58,14 +58,14 @@ int16_t board_temp_deg_c;        // global variable for calibrated temperature i
 int16_t cmdL;                    // global variable for Left Command
 int16_t cmdR;                    // global variable for Right Command
 
-uint8_t ignition = 0;                // global variable for ignition on SBU2 line
+uint8_t ignition = 0;            // global variable for ignition on SBU2 line
+
+uint8_t pkt_idx = 0;                 // For CAN msg counter
 
 //------------------------------------------------------------------------
 // Local variables
 //------------------------------------------------------------------------
-static uint32_t buzzerTimer_prev = 0;
-
-const uint8_t crc_poly = 0xD5U;  // standard crc8
+static uint32_t buzzerTimer_prev = 0U;
 
 
 int main(void) {
@@ -154,11 +154,14 @@ int main(void) {
           dat[3] = speedR & 0xFFU;
           dat[4] = rtY_Left.a_elecAngle;
           dat[5] = rtY_Right.a_elecAngle;
-          dat[6] = rtY_Left.z_errCode;
-          dat[7] = rtY_Right.z_errCode;
+          dat[6] = pkt_idx;
+          dat[7] = crc_checksum(dat, 7, crc_poly);
 
-          // speed_L(2), speed_R(2), hall_angle_L(1), hall_angle_R(1), left mot error(1), right motor error(1)
+          // speed_L(2), speed_R(2), hall_angle_L(1), hall_angle_R(1), counter(1), checksum(1)
           can_send_msg(0x201U, ((dat[7] << 24U) | (dat[6] << 16U) | (dat[5]<< 8U) | dat[4]), ((dat[3] << 24U) | (dat[2] << 16U) | (dat[1] << 8U) | dat[0]), 8U);
+
+          ++pkt_idx;
+          pkt_idx &= 0xFU;
         }
       }
 
@@ -166,9 +169,12 @@ int main(void) {
         uint8_t dat[2];
         dat[0] = ignition;
         dat[1] = enable_motors;
+        dat[2] = rtY_Left.z_errCode;
+        dat[3] = rtY_Right.z_errCode;
+        dat[4] = 0U; // Placeholder for fault status, TODO
 
-        // ignition(1), enable_motors(1)
-        can_send_msg(0x202U, 0x0U, ((dat[1] << 8U) | dat[0]), 2U);
+        // ignition(1), enable_motors(1), left motor error(1), right motor error(1), global fault status(1)
+        can_send_msg(0x202U, dat[4], ((dat[3] << 24U) | (dat[2] << 16U) | (dat[1] << 8U) | dat[0]), 5U);
 
         out_enable(LED_GREEN, ignition);
       }

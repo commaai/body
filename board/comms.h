@@ -20,6 +20,9 @@ extern volatile uint32_t torque_cmd_timeout;
 uint8_t uid[10];
 uint32_t uds_request = 0;
 
+const uint8_t crc_poly = 0xD5U;  // standard crc8
+uint32_t current_idx = 0;
+
 void can_send_msg(uint32_t addr, uint32_t dhr, uint32_t dlr, uint8_t len) {
   // wait for send
   while (!(CAN2->TSR & CAN_TSR_TME0));
@@ -149,10 +152,18 @@ void CAN2_RX0_IRQHandler(void) {
       for (int i=0; i<8; i++) {
         dat[i] = GET_MAILBOX_BYTE(&CAN2->sFIFOMailBox[0], i);
       }
-      cmdL = ((dat[0] << 8U) | dat[1]);
-      cmdR = ((dat[2] << 8U) | dat[3]);
-      torque_cmd_timeout = 0;
+      uint16_t valueL = ((dat[0] << 8U) | dat[1]);
+      uint16_t valueR = ((dat[2] << 8U) | dat[3]);
 
+      uint8_t idx = dat[4] & 0xFU;
+      if (crc_checksum(dat, 5, crc_poly) == dat[5]) {
+        if (((current_idx + 1U) & 0xFU) == idx) {
+          cmdL = valueL;
+          cmdR = valueR;
+          torque_cmd_timeout = 0;
+        }
+        current_idx = idx;
+      }
     } else if ((address == BROADCAST_ADDR) || (address == FALLBACK_ADDR) || (address == ECU_ADDR)) { // Process UBS and OBD2 requests
       process_ubs(address, GET_MAILBOX_BYTES_04(&CAN2->sFIFOMailBox[0]));
     }
