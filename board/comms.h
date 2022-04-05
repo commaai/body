@@ -69,9 +69,10 @@ void process_ubs(uint32_t addr, uint32_t dlr) {
       case 0x031002U:
         can_send_msg(ECU_R_ADDR, 0x0U, 0x035002U, 8U);
         break;
-      // APPLICATION SOFTWARE IDENTIFICATION : F181 (used for fingerprinting, date of board revision)
+      // APPLICATION SOFTWARE IDENTIFICATION : F181 (used for fingerprinting, firmware version)
       case 0x81F12203U:
-        can_send_msg(ECU_R_ADDR, 0x2F323081U, 0xF1620D10U, 8U);
+        COMPILE_TIME_ASSERT(sizeof(version) == 6U);
+        can_send_msg(ECU_R_ADDR, ((version[2] << 24U) | (version[1] << 16U) | (version[0] << 8U) | 0x81U), 0xF1620910U, 8U);
         uds_request = 0xF181U;
         break;
       // ECU SERIAL NUMBER : F18C
@@ -94,7 +95,7 @@ void process_ubs(uint32_t addr, uint32_t dlr) {
         switch(uds_request) {
           // APPLICATION SOFTWARE IDENTIFICATION : F181
           case 0xF181U:
-            can_send_msg(ECU_R_ADDR, 0x32323032U, 0x2F373221U, 8U);
+            can_send_msg(ECU_R_ADDR, 0x0U, ((version[5] << 24U) | (version[4] << 16U) | (version[3] << 8U) | 0x21U), 8U);
             uds_request = 0;
             break;
           // ECU SERIAL NUMBER : F18C

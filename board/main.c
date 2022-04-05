@@ -8,6 +8,7 @@
 #include "util.h"
 #include "bldc/BLDC_controller.h"      /* BLDC's header file */
 #include "bldc/rtwtypes.h"
+#include "version.h"
 #include "obj/gitversion.h"
 #include "comms.h"
 #include "drivers/clock.h"
