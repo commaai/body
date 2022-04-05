@@ -168,8 +168,8 @@ int main(void) {
       if (main_loop_counter % 20 == 0) { // Runs at ~10Hz
         uint8_t dat[2];
         dat[0] = (((fault_status & 0x3F) << 2U) | (enable_motors << 1U) | ignition);
-        dat[2] = rtY_Left.z_errCode;
-        dat[3] = rtY_Right.z_errCode;
+        dat[1] = rtY_Left.z_errCode;
+        dat[2] = rtY_Right.z_errCode;
 
         // ignition(1), enable_motors(1), left motor error(1), right motor error(1), global fault status(1)
         can_send_msg(0x202U, 0x0U, ((dat[2] << 16U) | (dat[1] << 8U) | dat[0]), 3U);
