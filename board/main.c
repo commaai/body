@@ -164,6 +164,17 @@ int main(void) {
           can_send_msg(0x201U, ((dat[7] << 24U) | (dat[6] << 16U) | (dat[5]<< 8U) | dat[4]), ((dat[3] << 24U) | (dat[2] << 16U) | (dat[1] << 8U) | dat[0]), 8U);
           ++pkt_idx;
           pkt_idx &= 0xFU;
+
+          // left_pha_ab(2), left_pha_bc(2), right_pha_ab(2), right_pha_bc(2)
+          dat[0] = (rtU_Left.i_phaAB >> 8U) & 0xFFU;
+          dat[1] = rtU_Left.i_phaAB & 0xFFU;
+          dat[2] = (rtU_Left.i_phaBC >> 8U) & 0xFFU;
+          dat[3] = rtU_Left.i_phaBC & 0xFFU;
+          dat[4] = (rtU_Right.i_phaAB >> 8U) & 0xFFU;
+          dat[5] = rtU_Right.i_phaAB & 0xFFU;
+          dat[6] = (rtU_Right.i_phaBC >> 8U) & 0xFFU;
+          dat[7] = rtU_Right.i_phaBC & 0xFFU;
+          can_send_msg(0x204U, ((dat[7] << 24U) | (dat[6] << 16U) | (dat[5] << 8U) | dat[4]), ((dat[3] << 24U) | (dat[2] << 16U) | (dat[1] << 8U) | dat[0]), 8U);
         }
       }
 
