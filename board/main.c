@@ -62,6 +62,8 @@ int16_t cmdR;                    // global variable for Right Command
 
 uint8_t ignition = 0;            // global variable for ignition on SBU2 line
 uint8_t charger_connected = 0;   // status of the charger port
+uint8_t cells_count = BAT_CELLS; // init with 7s battery
+bool is_cells_adjusted = false;  // if cells count needs adjustment
 uint8_t fault_status = 0;        // fault status of the whole system
 uint8_t pkt_idx = 0;             // For CAN msg counter
 
@@ -194,15 +196,16 @@ int main(void) {
       // runs at ~1Hz
       if (main_loop_counter % 200 == 0) {
         charger_connected = !HAL_GPIO_ReadPin(CHARGER_PORT, CHARGER_PIN);
-        uint8_t battery_percent = 100 - (((420 * BAT_CELLS) - batVoltageCalib) / BAT_CELLS / VOLTS_PER_PERCENT / 100); // Battery % left
+        uint8_t battery_percent = 100 - (((420 * cells_count) - batVoltageCalib) / cells_count / VOLTS_PER_PERCENT / 100); // Battery % left
 
-        // MCU temp(2), battery voltage(2), battery_percent(0:7), charger_connected(0:1)
-        uint8_t dat[4];
+        // MCU temp(1), battery voltage(2), battery_percent(0:7), charger_connected(0:1)
+        uint8_t dat[5];
         dat[0] = board_temp_deg_c & 0xFFU;
         dat[1] = (batVoltageCalib >> 8U) & 0xFFU;
         dat[2] = batVoltageCalib & 0xFFU;
         dat[3] = (((battery_percent & 0x7FU) << 1U) | charger_connected);
-        can_send_msg(0x203U, 0x0U, ((dat[3] << 24U) | (dat[2] << 16U) | (dat[1] << 8U) | dat[0]), 4U);
+        dat[4] = cells_count & 0xFU;
+        can_send_msg(0x203U, (dat[4]), ((dat[3] << 24U) | (dat[2] << 16U) | (dat[1] << 8U) | dat[0]), 5U);
 
         out_enable(LED_BLUE, false); // Reset LED after CAN RX
         out_enable(LED_GREEN, true); // Always use LED to show that body is on
@@ -217,17 +220,26 @@ int main(void) {
       process_can();
       poweroffPressCheck();
 
-      if ((TEMP_POWEROFF_ENABLE && board_temp_deg_c >= TEMP_POWEROFF && speedAvgAbs < 20) || (batVoltage < BAT_DEAD && speedAvgAbs < 20)) {  // poweroff before mainboard burns OR low bat 3
+      // Set number of cells once after 5s of runtime
+      if ((main_loop_counter > 1000) && !is_cells_adjusted) {
+        if (batVoltageCalib > 3000) {
+          cells_count = 10U;
+        } else {
+          cells_count = 7U;
+        }
+      }
+
+      if ((TEMP_POWEROFF_ENABLE && board_temp_deg_c >= TEMP_POWEROFF && speedAvgAbs < 20) || (batVoltage < BAT_DEAD(cells_count) && speedAvgAbs < 20)) {  // poweroff before mainboard burns OR low bat 3
         poweroff();
       } else if (rtY_Left.z_errCode || rtY_Right.z_errCode) { // 1 beep (low pitch): Motor error, disable motors
         enable_motors = 0;
         beepCount(1, 24, 1);
       } else if (TEMP_WARNING_ENABLE && board_temp_deg_c >= TEMP_WARNING) { // 5 beeps (low pitch): Mainboard temperature warning
         beepCount(5, 24, 1);
-      } else if (batVoltage < BAT_LVL1) { // 1 beep fast (medium pitch): Low bat 1
+      } else if (batVoltage < BAT_LVL1(cells_count)) { // 1 beep fast (medium pitch): Low bat 1
         beepCount(0, 10, 6);
         out_enable(LED_RED, true);
-      } else if (batVoltage < BAT_LVL2) { // 1 beep slow (medium pitch): Low bat 2
+      } else if (batVoltage < BAT_LVL2(cells_count)) { // 1 beep slow (medium pitch): Low bat 2
         beepCount(0, 10, 30);
       } else {  // do not beep
         beepCount(0, 0, 0);
