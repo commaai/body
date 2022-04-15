@@ -56,6 +56,17 @@ int main(void) {
   out_enable(LED_GREEN, false);
   out_enable(LED_BLUE, false);
 
+  if(HAL_GPIO_ReadPin(BUTTON_PORT, BUTTON_PIN)) {
+    uint16_t cnt_press = 0;
+    while(HAL_GPIO_ReadPin(BUTTON_PORT, BUTTON_PIN)) {
+      HAL_Delay(10);
+      cnt_press++;
+      if (cnt_press == 2 * 100) {
+        soft_flasher_start();
+      }
+    }
+  }
+
   if (enter_bootloader_mode == ENTER_SOFTLOADER_MAGIC) {
     enter_bootloader_mode = 0;
     soft_flasher_start();

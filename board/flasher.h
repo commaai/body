@@ -53,7 +53,7 @@ int can_control_msg(USB_Setup_TypeDef *setup, uint8_t *resp) {
         flash_unlock();
         resp[1] = 0xff;
       }
-      out_enable(LED_GREEN, true);
+      out_enable(LED_BLUE, true);
       unlocked = true;
       prog_ptr = (uint32_t *)APP_START_ADDRESS;
       break;
@@ -226,6 +226,24 @@ void CAN2_SCE_IRQHandler(void) {
   llcan_clear_send(CAN);
 }
 
+void check_powerdown(void) {
+  if(HAL_GPIO_ReadPin(BUTTON_PORT, BUTTON_PIN)) {
+    uint16_t cnt_press = 0;
+    while(HAL_GPIO_ReadPin(BUTTON_PORT, BUTTON_PIN)) {
+      HAL_Delay(10);
+      cnt_press++;
+      if (cnt_press == 2 * 100) {
+        out_enable(POWERSWITCH, false);
+        while(1) {
+          // Temporarily, to see that we went to power off but can't switch the latch
+          HAL_GPIO_TogglePin(LED_RED_PORT, LED_RED_PIN);
+          HAL_Delay(100);
+        }
+      }
+    }
+  }
+}
+
 
 void soft_flasher_start(void) {
   HAL_NVIC_SetPriority(CAN2_TX_IRQn, 0, 0);
@@ -247,15 +265,16 @@ void soft_flasher_start(void) {
   llcan_init(CAN);
 
   // green LED on for flashing
-  out_enable(LED_GREEN, true);
+  out_enable(LED_BLUE, true);
 
   uint64_t cnt = 0;
 
   for (cnt=0;;cnt++) {
     // blink the green LED fast
-    out_enable(LED_GREEN, false);
+    out_enable(LED_BLUE, false);
     delay(500000);
-    out_enable(LED_GREEN, true);
+    out_enable(LED_BLUE, true);
     delay(500000);
+    check_powerdown();
   }
 }
