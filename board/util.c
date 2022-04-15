@@ -174,7 +174,7 @@ void poweroffPressCheck(void) {
     while(HAL_GPIO_ReadPin(BUTTON_PORT, BUTTON_PIN)) {
       HAL_Delay(10);
       cnt_press++;
-      if (cnt_press == 2 * 100) { poweroff(); }
+      if (cnt_press == (2 * 100)) { poweroff(); }
     }
     if (cnt_press > 8) {
       ignition = !ignition;

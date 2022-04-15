@@ -232,7 +232,7 @@ void check_powerdown(void) {
     while(HAL_GPIO_ReadPin(BUTTON_PORT, BUTTON_PIN)) {
       HAL_Delay(10);
       cnt_press++;
-      if (cnt_press == 2 * 100) {
+      if (cnt_press == (2 * 100)) {
         out_enable(POWERSWITCH, false);
         while(1) {
           // Temporarily, to see that we went to power off but can't switch the latch

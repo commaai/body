@@ -3,6 +3,8 @@
 #define VERS_TAG 0x53524556
 #define MIN_VERSION 2
 
+#define RECOVERY_MODE_DELAY 5
+
 // ********************* Includes *********************
 #include <stdbool.h>
 #include <stdint.h>
@@ -61,7 +63,7 @@ int main(void) {
     while(HAL_GPIO_ReadPin(BUTTON_PORT, BUTTON_PIN)) {
       HAL_Delay(10);
       cnt_press++;
-      if (cnt_press == 2 * 100) {
+      if (cnt_press == (RECOVERY_MODE_DELAY * 100)) {
         soft_flasher_start();
       }
     }
