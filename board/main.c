@@ -148,7 +148,8 @@ int main(void) {
 
       // runs at ~100Hz
       if (main_loop_counter % 2 == 0) {
-       if (ignition_off_counter <= 2) {
+        if (ignition_off_counter <= 10) {
+          // speed_L(2), speed_R(2), hall_angle_L(1), hall_angle_R(1), counter(1), checksum(1)
           uint8_t dat[8];
           uint16_t speedL = rtY_Left.n_mot;
           uint16_t speedR = -(rtY_Right.n_mot); // Invert speed sign for the right wheel
@@ -160,10 +161,7 @@ int main(void) {
           dat[5] = rtY_Right.a_elecAngle;
           dat[6] = pkt_idx;
           dat[7] = crc_checksum(dat, 7, crc_poly);
-
-          // speed_L(2), speed_R(2), hall_angle_L(1), hall_angle_R(1), counter(1), checksum(1)
           can_send_msg(0x201U, ((dat[7] << 24U) | (dat[6] << 16U) | (dat[5]<< 8U) | dat[4]), ((dat[3] << 24U) | (dat[2] << 16U) | (dat[1] << 8U) | dat[0]), 8U);
-
           ++pkt_idx;
           pkt_idx &= 0xFU;
         }
@@ -171,13 +169,12 @@ int main(void) {
 
       // runs at ~10Hz
       if (main_loop_counter % 20 == 0) {
-        if (ignition_off_counter <= 2) {
+        if (ignition_off_counter <= 10) {
+          // fault_status(0:6), enable_motors(0:1), ignition(0:1), left motor error(1), right motor error(1), global fault status(1)
           uint8_t dat[2];
           dat[0] = (((fault_status & 0x3F) << 2U) | (enable_motors << 1U) | ignition);
           dat[1] = rtY_Left.z_errCode;
           dat[2] = rtY_Right.z_errCode;
-
-          // fault_status(0:6), enable_motors(0:1), ignition(0:1), left motor error(1), right motor error(1), global fault status(1)
           can_send_msg(0x202U, 0x0U, ((dat[2] << 16U) | (dat[1] << 8U) | dat[0]), 3U);
         }
         out_enable(LED_GREEN, ignition);
@@ -188,13 +185,12 @@ int main(void) {
         charger_connected = !HAL_GPIO_ReadPin(CHARGER_PORT, CHARGER_PIN);
         uint8_t battery_percent = 100 - (((420 * BAT_CELLS) - batVoltageCalib) / BAT_CELLS / VOLTS_PER_PERCENT / 100); // Battery % left
 
+        // MCU temp(2), battery voltage(2), battery_percent(0:7), charger_connected(0:1)
         uint8_t dat[4];
         dat[0] = board_temp_deg_c & 0xFFU;
         dat[1] = (batVoltageCalib >> 8U) & 0xFFU;
         dat[2] = batVoltageCalib & 0xFFU;
         dat[3] = (((battery_percent & 0x7FU) << 1U) | charger_connected);
-
-        // MCU temp(2), battery voltage(2), battery_percent(0:7), charger_connected(0:1)
         can_send_msg(0x203U, 0x0U, ((dat[3] << 24U) | (dat[2] << 16U) | (dat[1] << 8U) | dat[0]), 4U);
 
         out_enable(LED_BLUE, false); // Reset LED after CAN RX
@@ -207,6 +203,7 @@ int main(void) {
         }
       }
 
+      process_can();
       poweroffPressCheck();
 
       if ((TEMP_POWEROFF_ENABLE && board_temp_deg_c >= TEMP_POWEROFF && speedAvgAbs < 20) || (batVoltage < BAT_DEAD && speedAvgAbs < 20)) {  // poweroff before mainboard burns OR low bat 3

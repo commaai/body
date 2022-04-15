@@ -40,10 +40,10 @@ bool llcan_set_speed(CAN_TypeDef *CAN_obj, uint32_t speed, bool loopback, bool s
       CAN_obj->BTR |= CAN_BTR_SILM;
     }
 
-    // reset
     CAN_obj->MCR |= CAN_MCR_AWUM; // Automatic wakeup mode
     CAN_obj->MCR |= CAN_MCR_ABOM; // Automatic bus-off management
-    CAN_obj->MCR |= CAN_MCR_NART; // No automatic retransmission
+    CAN_obj->MCR &= ~CAN_MCR_NART; // Automatic retransmission
+    CAN_obj->MCR |= CAN_MCR_TXFP; // Priority driven by the request order (chronologically)
     CAN_obj->MCR &= ~CAN_MCR_INRQ;
 
     timeout_counter = 0U;

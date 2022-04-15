@@ -16,7 +16,6 @@ def heartbeat_thread(p):
 
 if __name__ == "__main__":
   parser = argparse.ArgumentParser(description='Flash body over can')
-  parser.add_argument('--recover', action='store_true')
   parser.add_argument("fn", type=str, nargs='?', help="flash file")
   args = parser.parse_args()
 
@@ -28,11 +27,7 @@ if __name__ == "__main__":
     if len(p.can_recv()) == 0:
       break
 
-  if args.recover:
-    p.can_send(0x250, b"\xce\xfa\xad\xde\x1e\x0b\xb0\x02", 0)
-    exit(0)
-  else:
-    p.can_send(0x250, b"\xce\xfa\xad\xde\x1e\x0b\xb0\x0a", 0)
+  p.can_send(0x250, b"\xce\xfa\xad\xde\x1e\x0b\xb0\x0a", 0)
 
   if args.fn:
     time.sleep(0.1)
