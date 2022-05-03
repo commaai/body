@@ -231,6 +231,7 @@ int main(void) {
         beepCount(0, 10, 30);
       } else {  // do not beep
         beepCount(0, 0, 0);
+        out_enable(LED_RED, false);
       }
 
       buzzerTimer_prev = buzzerTimer;
