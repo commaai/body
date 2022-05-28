@@ -13,19 +13,17 @@
 #include "comms.h"
 #include "drivers/clock.h"
 #include "early_init.h"
+#include "drivers/angle_sensor.h"
+#include "boards.h"
 
 
-uint32_t enter_bootloader_mode;
-
-void __initialize_hardware_early(void) {
-  early_initialization();
-}
 //------------------------------------------------------------------------
 // Global variables set externally
 //------------------------------------------------------------------------
 extern TIM_HandleTypeDef htim_left;
 extern TIM_HandleTypeDef htim_right;
 extern ADC_HandleTypeDef hadc;
+extern SPI_HandleTypeDef hspi3;
 extern volatile adc_buf_t adc_buffer;
 
 // Matlab defines - from auto-code generation
@@ -48,6 +46,9 @@ extern uint8_t enable_motors;                  // global variable for motor enab
 
 extern int16_t batVoltage;              // global variable for battery voltage
 
+extern int32_t motPosL;
+extern int32_t motPosR;
+
 //------------------------------------------------------------------------
 // Global variables set here in main.c
 //------------------------------------------------------------------------
@@ -57,8 +58,10 @@ volatile uint32_t torque_cmd_timeout;
 volatile uint32_t ignition_off_counter;
 int16_t batVoltageCalib;         // global variable for calibrated battery voltage
 int16_t board_temp_deg_c;        // global variable for calibrated temperature in degrees Celsius
-int16_t cmdL;                    // global variable for Left Command
-int16_t cmdR;                    // global variable for Right Command
+volatile int16_t cmdL;                    // global variable for Left Command
+volatile int16_t cmdR;                    // global variable for Right Command
+
+uint32_t can_addr_offset;         // CAN messages addresses offset between different board types
 
 uint8_t ignition = 0;            // global variable for ignition on SBU2 line
 uint8_t charger_connected = 0;   // status of the charger port
@@ -70,6 +73,9 @@ uint8_t pkt_idx = 0;             // For CAN msg counter
 //------------------------------------------------------------------------
 static uint32_t buzzerTimer_prev = 0U;
 
+void __initialize_hardware_early(void) {
+  early_initialization();
+}
 
 int main(void) {
   HAL_Init();
@@ -83,9 +89,12 @@ int main(void) {
   HAL_NVIC_SetPriority(SysTick_IRQn, 0, 0);
 
   SystemClock_Config();
+  MX_GPIO_Clocks_Init();
 
   __HAL_RCC_DMA2_CLK_DISABLE();
-  MX_GPIO_Init();
+
+  board_detect();
+  MX_GPIO_Common_Init();
   MX_TIM_Init();
   MX_ADC_Init();
   BLDC_Init();
@@ -111,6 +120,11 @@ int main(void) {
   int32_t board_temp_adcFixdt = adc_buffer.temp << 16;  // Fixed-point filter output initialized with current ADC converted to fixed-point
   int16_t board_temp_adcFilt  = adc_buffer.temp;
 
+  uint8_t angle_sensor_error = 0;
+  uint16_t sensor_angle[SENSOR_COUNT] = { 0 };
+  uint16_t hall_angle_offset[SENSOR_COUNT] = { 0 };
+  angle_sensor_read(sensor_angle);
+
   // Loop until button is released
   while(HAL_GPIO_ReadPin(BUTTON_PORT, BUTTON_PIN)) { HAL_Delay(10); }
 
@@ -131,12 +145,52 @@ int main(void) {
         beepShort(6); // make 2 beeps indicating the motor enable
         beepShort(4);
         HAL_Delay(100);
+        angle_sensor_error = 0;
+        sensor_angle[0] = 0;
+        sensor_angle[1] = 0;
+        angle_sensor_read(sensor_angle);
+        hall_angle_offset[0] = (sensor_angle[0] * ANGLE_TO_DEGREES);
+        hall_angle_offset[1] = (sensor_angle[1] * ANGLE_TO_DEGREES);
         cmdL = cmdR = 0;
         enable_motors = 1; // enable motors
       }
 
-      pwml = CLAMP((int)cmdL, -1000, 1000);
-      pwmr = -CLAMP((int)cmdR, -1000, 1000);
+      if (hw_type == HW_TYPE_KNEE) {
+        angle_sensor_read(sensor_angle);
+        // Safety to stop operation if angle sensor reading failed TODO: adjust sensivity and add lowpass to angle sensor?
+        if ((ABS((hall_angle_offset[0] + ((motPosL / 15 / 11) % 360)) - (sensor_angle[0] * ANGLE_TO_DEGREES)) > 5) ||
+            (ABS((hall_angle_offset[1] + ((motPosR / 15 / 11) % 360)) - (sensor_angle[1] * ANGLE_TO_DEGREES)) > 5)) {
+          angle_sensor_error = 1;
+          cmdL = cmdR = 0;
+        }
+        // Safety to stop movement when reaching dead angles, around 20 and 340 degrees
+        if (((sensor_angle[0] < 900) && (cmdL < 0)) || ((sensor_angle[0] > 15500) && (cmdL > 0))) {
+          cmdL = 0;
+        }
+        if (((sensor_angle[1] < 900) && (cmdR < 0)) || ((sensor_angle[1] > 15500) && (cmdR > 0))) {
+          cmdR = 0;
+        }
+      }
+
+      if (hw_type == HW_TYPE_KNEE) {
+        if ((ABS(cmdL) < 20) || angle_sensor_error) {
+          rtP_Left.n_cruiseMotTgt   = 0;
+          rtP_Left.b_cruiseCtrlEna  = 1;
+        } else {
+          rtP_Left.b_cruiseCtrlEna  = 0;
+          pwml = -CLAMP((int)cmdL, -1000, 1000);
+        }
+        if ((ABS(cmdR) < 20) || angle_sensor_error) {
+          rtP_Right.n_cruiseMotTgt  = 0;
+          rtP_Right.b_cruiseCtrlEna = 1;
+        } else {
+          rtP_Right.b_cruiseCtrlEna = 0;
+          pwmr = -CLAMP((int)cmdR, -1000, 1000);
+        }
+      } else {
+        pwml = CLAMP((int)cmdL, -1000, 1000);
+        pwmr = -CLAMP((int)cmdR, -1000, 1000);
+      }
 
       // ####### CALC BOARD TEMPERATURE #######
       filtLowPass32(adc_buffer.temp, TEMP_FILT_COEF, &board_temp_adcFixdt);
@@ -157,11 +211,11 @@ int main(void) {
           dat[1] = speedL & 0xFFU;
           dat[2] = (speedR >> 8U) & 0xFFU;
           dat[3] = speedR & 0xFFU;
-          dat[4] = rtY_Left.a_elecAngle;
-          dat[5] = rtY_Right.a_elecAngle;
+          dat[4] = 0; // TODO: remove from OP and dbc, no value
+          dat[5] = 0; // TODO: remove from OP and dbc, no value
           dat[6] = pkt_idx;
           dat[7] = crc_checksum(dat, 7, crc_poly);
-          can_send_msg(0x201U, ((dat[7] << 24U) | (dat[6] << 16U) | (dat[5]<< 8U) | dat[4]), ((dat[3] << 24U) | (dat[2] << 16U) | (dat[1] << 8U) | dat[0]), 8U);
+          can_send_msg((0x201U + can_addr_offset), ((dat[7] << 24U) | (dat[6] << 16U) | (dat[5]<< 8U) | dat[4]), ((dat[3] << 24U) | (dat[2] << 16U) | (dat[1] << 8U) | dat[0]), 8U);
           ++pkt_idx;
           pkt_idx &= 0xFU;
 
@@ -174,7 +228,27 @@ int main(void) {
           dat[5] = rtU_Right.i_phaAB & 0xFFU;
           dat[6] = (rtU_Right.i_phaBC >> 8U) & 0xFFU;
           dat[7] = rtU_Right.i_phaBC & 0xFFU;
-          can_send_msg(0x204U, ((dat[7] << 24U) | (dat[6] << 16U) | (dat[5] << 8U) | dat[4]), ((dat[3] << 24U) | (dat[2] << 16U) | (dat[1] << 8U) | dat[0]), 8U);
+          can_send_msg((0x204U + can_addr_offset), ((dat[7] << 24U) | (dat[6] << 16U) | (dat[5] << 8U) | dat[4]), ((dat[3] << 24U) | (dat[2] << 16U) | (dat[1] << 8U) | dat[0]), 8U);
+
+          uint16_t one;
+          uint16_t two;
+          if (hw_type == HW_TYPE_KNEE) {
+            one = hall_angle_offset[0] + ((motPosL / 15 / 11) % 360);
+            two = hall_angle_offset[1] + ((motPosR / 15 / 11) % 360);
+          } else {
+            one = motPosL / 15;
+            two = -motPosR / 15;
+          }
+          // first angle sensor(2), second angle sensor(2)
+          dat[0] = (sensor_angle[0]>>8U) & 0xFFU;
+          dat[1] = sensor_angle[0] & 0xFFU;
+          dat[2] = (sensor_angle[1]>>8U) & 0xFFU;
+          dat[3] = sensor_angle[1] & 0xFFU;
+          dat[4] = (one>>8U) & 0xFFU;
+          dat[5] = one & 0xFFU;
+          dat[6] = (two>>8U) & 0xFFU;
+          dat[7] = two & 0xFFU;
+          can_send_msg((0x205U + can_addr_offset), ((dat[7] << 24U) | (dat[6] << 16U) | (dat[5] << 8U) | dat[4]), ((dat[3] << 24U) | (dat[2] << 16U) | (dat[1] << 8U) | dat[0]), 8U);
         }
       }
 
@@ -186,7 +260,7 @@ int main(void) {
           dat[0] = (((fault_status & 0x3F) << 2U) | (enable_motors << 1U) | ignition);
           dat[1] = rtY_Left.z_errCode;
           dat[2] = rtY_Right.z_errCode;
-          can_send_msg(0x202U, 0x0U, ((dat[2] << 16U) | (dat[1] << 8U) | dat[0]), 3U);
+          can_send_msg((0x202U + can_addr_offset), 0x0U, ((dat[2] << 16U) | (dat[1] << 8U) | dat[0]), 3U);
         }
         out_enable(LED_GREEN, ignition);
       }
@@ -202,7 +276,7 @@ int main(void) {
         dat[1] = (batVoltageCalib >> 8U) & 0xFFU;
         dat[2] = batVoltageCalib & 0xFFU;
         dat[3] = (((battery_percent & 0x7FU) << 1U) | charger_connected);
-        can_send_msg(0x203U, 0x0U, ((dat[3] << 24U) | (dat[2] << 16U) | (dat[1] << 8U) | dat[0]), 4U);
+        can_send_msg((0x203U + can_addr_offset), 0x0U, ((dat[3] << 24U) | (dat[2] << 16U) | (dat[1] << 8U) | dat[0]), 4U);
 
         out_enable(LED_BLUE, false); // Reset LED after CAN RX
         out_enable(LED_GREEN, true); // Always use LED to show that body is on
@@ -231,7 +305,7 @@ int main(void) {
         beepCount(0, 10, 30);
       } else {  // do not beep
         beepCount(0, 0, 0);
-        out_enable(LED_RED, false);
+        //out_enable(LED_RED, false);
       }
 
       buzzerTimer_prev = buzzerTimer;

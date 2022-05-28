@@ -14,8 +14,12 @@
 #include "drivers/llbxcan.h"
 #include "uds.h"
 
-extern int16_t cmdL;                    // global variable for Left Command
-extern int16_t cmdR;                    // global variable for Right Command
+extern P rtP_Left;
+extern P rtP_Right;
+extern volatile int16_t cmdL;                    // global variable for Left Command
+extern volatile int16_t cmdR;                    // global variable for Right Command
+extern uint8_t hw_type;
+extern uint32_t can_addr_offset;
 
 extern uint32_t enter_bootloader_mode;
 extern volatile uint32_t torque_cmd_timeout;
@@ -104,13 +108,14 @@ void CAN2_SCE_IRQHandler(void) {
 void CAN2_RX0_IRQHandler(void) {
   while ((CAN2->RF0R & CAN_RF0R_FMP0) != 0) {
     int address = CAN2->sFIFOMailBox[0].RIR >> 21;
-    if (address == 0x250U) {
+    if (address == (int32_t)(0x250U + can_addr_offset)) {
       if ((GET_MAILBOX_BYTES_04(&CAN2->sFIFOMailBox[0]) == 0xdeadface) && (GET_MAILBOX_BYTES_48(&CAN2->sFIFOMailBox[0]) == 0x0ab00b1e)) {
         enter_bootloader_mode = ENTER_SOFTLOADER_MAGIC;
         NVIC_SystemReset();
       }
-      uint8_t dat[8];
-      for (int i=0; i<8; i++) {
+      #define MSG_TRQ_LEN 6
+      uint8_t dat[MSG_TRQ_LEN];
+      for (int i=0; i<MSG_TRQ_LEN; i++) {
         dat[i] = GET_MAILBOX_BYTE(&CAN2->sFIFOMailBox[0], i);
       }
       uint16_t valueL = ((dat[0] << 8U) | dat[1]);
@@ -125,7 +130,24 @@ void CAN2_RX0_IRQHandler(void) {
         }
         current_idx = idx;
       }
-    } else if ((address == BROADCAST_ADDR) || (address == FALLBACK_ADDR) || (address == ECU_ADDR) || (address == DEBUG_ADDR)) { // Process UBS and OBD2 requests
+    } else if (address == (int32_t)(0x251U + can_addr_offset)) {
+      #define MSG_SPD_LEN 5
+      uint8_t dat[MSG_TRQ_LEN];
+      for (int i=0; i<MSG_TRQ_LEN; i++) {
+        dat[i] = GET_MAILBOX_BYTE(&CAN2->sFIFOMailBox[0], i);
+      }
+      uint16_t valueL = ((dat[0] << 8U) | dat[1]);
+      uint16_t valueR = ((dat[2] << 8U) | dat[3]);
+
+      if (crc_checksum(dat, 4, crc_poly) == dat[4]) {
+        if ((valueL == 0) || (valueR == 0)) {
+          rtP_Left.n_max = rtP_Right.n_max = N_MOT_MAX << 4;
+        } else {
+          rtP_Left.n_max = valueL << 4;
+          rtP_Right.n_max = valueR << 4;
+        }
+      }
+    } else if ((hw_type == HW_TYPE_BASE) && ((address == BROADCAST_ADDR) || (address == FALLBACK_ADDR) || (address == ECU_ADDR) || (address == DEBUG_ADDR))) { // Process UBS and OBD2 requests, ignore for knee
       process_uds(address, GET_MAILBOX_BYTES_04(&CAN2->sFIFOMailBox[0]));
     }
     out_enable(LED_BLUE, true);

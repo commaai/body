@@ -7,40 +7,45 @@
 TIM_HandleTypeDef htim_right;
 TIM_HandleTypeDef htim_left;
 ADC_HandleTypeDef hadc;
+SPI_HandleTypeDef hspi3;
 
 volatile adc_buf_t adc_buffer;
+hall_sensor hall_left;
+hall_sensor hall_right;
 
 
-void MX_GPIO_Init(void) {
-  GPIO_InitTypeDef GPIO_InitStruct;
-
+void MX_GPIO_Clocks_Init(void) {
   /* GPIO Ports Clock Enable */
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
   __HAL_RCC_GPIOC_CLK_ENABLE();
   __HAL_RCC_GPIOD_CLK_ENABLE();
+}
+
+void MX_GPIO_Common_Init(void) {
+  GPIO_InitTypeDef GPIO_InitStruct;
 
   GPIO_InitStruct.Mode  = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull  = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
 
-  GPIO_InitStruct.Pin = LEFT_HALL_U_PIN;
-  HAL_GPIO_Init(LEFT_HALL_U_PORT, &GPIO_InitStruct);
+  GPIO_InitStruct.Pin = hall_left.hall_pinA;
+  HAL_GPIO_Init(hall_left.hall_portA, &GPIO_InitStruct);
 
-  GPIO_InitStruct.Pin = LEFT_HALL_V_PIN;
-  HAL_GPIO_Init(LEFT_HALL_V_PORT, &GPIO_InitStruct);
+  GPIO_InitStruct.Pin = hall_left.hall_pinB;
+  HAL_GPIO_Init(hall_left.hall_portB, &GPIO_InitStruct);
 
-  GPIO_InitStruct.Pin = LEFT_HALL_W_PIN;
-  HAL_GPIO_Init(LEFT_HALL_W_PORT, &GPIO_InitStruct);
+  GPIO_InitStruct.Pin = hall_left.hall_pinC;
+  HAL_GPIO_Init(hall_left.hall_portC, &GPIO_InitStruct);
 
-  GPIO_InitStruct.Pin = RIGHT_HALL_U_PIN;
-  HAL_GPIO_Init(RIGHT_HALL_U_PORT, &GPIO_InitStruct);
+  GPIO_InitStruct.Pin = hall_right.hall_pinA;
+  HAL_GPIO_Init(hall_right.hall_portA, &GPIO_InitStruct);
 
-  GPIO_InitStruct.Pin = RIGHT_HALL_V_PIN;
-  HAL_GPIO_Init(RIGHT_HALL_V_PORT, &GPIO_InitStruct);
+  GPIO_InitStruct.Pin = hall_right.hall_pinB;
+  HAL_GPIO_Init(hall_right.hall_portB, &GPIO_InitStruct);
 
-  GPIO_InitStruct.Pin = RIGHT_HALL_W_PIN;
-  HAL_GPIO_Init(RIGHT_HALL_W_PORT, &GPIO_InitStruct);
+  GPIO_InitStruct.Pin = hall_right.hall_pinC;
+  HAL_GPIO_Init(hall_right.hall_portC, &GPIO_InitStruct);
 
   GPIO_InitStruct.Pull = GPIO_PULLUP;
   GPIO_InitStruct.Pin = CHARGER_PIN;
@@ -54,14 +59,8 @@ void MX_GPIO_Init(void) {
 
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
 
-  GPIO_InitStruct.Pin = LED_RED_PIN;
-  HAL_GPIO_Init(LED_RED_PORT, &GPIO_InitStruct);
-
   GPIO_InitStruct.Pin = LED_GREEN_PIN;
   HAL_GPIO_Init(LED_GREEN_PORT, &GPIO_InitStruct);
-
-  GPIO_InitStruct.Pin = LED_BLUE_PIN;
-  HAL_GPIO_Init(LED_BLUE_PORT, &GPIO_InitStruct);
 
   GPIO_InitStruct.Pin = CAN_STBY_PIN;
   HAL_GPIO_Init(CAN_STBY_PORT, &GPIO_InitStruct);
@@ -96,8 +95,8 @@ void MX_GPIO_Init(void) {
   GPIO_InitStruct.Pin = RIGHT_V_CUR_PIN;
   HAL_GPIO_Init(RIGHT_V_CUR_PORT, &GPIO_InitStruct);
 
-  GPIO_InitStruct.Pin = DCLINK_PIN;
-  HAL_GPIO_Init(DCLINK_PORT, &GPIO_InitStruct);
+  GPIO_InitStruct.Pin = BATT_PIN;
+  HAL_GPIO_Init(BATT_PORT, &GPIO_InitStruct);
 
   GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
   GPIO_InitStruct.Alternate = GPIO_AF3_TIM8;
@@ -151,6 +150,65 @@ void MX_GPIO_Init(void) {
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 }
 
+void MX_GPIO_LED_Base_Init(void) {
+  GPIO_InitTypeDef GPIO_InitStruct;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+
+  GPIO_InitStruct.Pin = LED_RED_PIN;
+  HAL_GPIO_Init(LED_RED_PORT, &GPIO_InitStruct);
+
+  GPIO_InitStruct.Pin = LED_BLUE_PIN;
+  HAL_GPIO_Init(LED_BLUE_PORT, &GPIO_InitStruct);
+
+}
+
+void MX_SPI3_Init(void) {
+  GPIO_InitTypeDef GPIO_InitStruct;
+
+  GPIO_InitStruct.Pin = AS5048A_CS_PIN;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+  HAL_GPIO_Init(AS5048_CS_PORT, &GPIO_InitStruct);
+  HAL_GPIO_WritePin(AS5048_CS_PORT, AS5048A_CS_PIN, GPIO_PIN_SET);
+
+  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+  GPIO_InitStruct.Alternate = GPIO_AF6_SPI3;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Pin = SPI3_SCK_PIN;
+  HAL_GPIO_Init(SPI3_PORT, &GPIO_InitStruct);
+
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Pin = SPI3_MISO_PIN;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(SPI3_PORT, &GPIO_InitStruct);
+
+  GPIO_InitStruct.Pull = GPIO_PULLDOWN;
+  GPIO_InitStruct.Pin = SPI3_MOSI_PIN;
+  HAL_GPIO_Init(SPI3_PORT, &GPIO_InitStruct);
+
+  __HAL_RCC_SPI3_CLK_ENABLE();
+
+  hspi3.Instance = SPI3;
+  hspi3.Init.Mode = SPI_MODE_MASTER;
+  hspi3.Init.Direction = SPI_DIRECTION_2LINES;
+  hspi3.Init.DataSize = SPI_DATASIZE_16BIT;
+  hspi3.Init.CLKPolarity = SPI_POLARITY_LOW;
+  hspi3.Init.CLKPhase = SPI_PHASE_2EDGE;
+  hspi3.Init.NSS = SPI_NSS_SOFT;
+  hspi3.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_32; // 1.125 MHz at 72MHz clock
+  hspi3.Init.FirstBit = SPI_FIRSTBIT_MSB;
+  hspi3.Init.TIMode = SPI_TIMODE_DISABLE;
+  hspi3.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
+  hspi3.Init.CRCPolynomial = 10;
+
+  HAL_SPI_Init(&hspi3);
+}
+
 void MX_TIM_Init(void) {
   __HAL_RCC_TIM1_CLK_ENABLE();
   __HAL_RCC_TIM8_CLK_ENABLE();
@@ -163,7 +221,7 @@ void MX_TIM_Init(void) {
   htim_right.Instance               = RIGHT_TIM;
   htim_right.Init.Prescaler         = 0;
   htim_right.Init.CounterMode       = TIM_COUNTERMODE_CENTERALIGNED1;
-  htim_right.Init.Period            = SystemCoreClock / 2 / PWM_FREQ; // Was 64000000 before SystemCoreClock
+  htim_right.Init.Period            = CORE_FREQ / 2 / PWM_FREQ;
   htim_right.Init.ClockDivision     = TIM_CLOCKDIVISION_DIV1;
   htim_right.Init.RepetitionCounter = 0;
   htim_right.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
@@ -196,7 +254,7 @@ void MX_TIM_Init(void) {
   htim_left.Instance               = LEFT_TIM;
   htim_left.Init.Prescaler         = 0;
   htim_left.Init.CounterMode       = TIM_COUNTERMODE_CENTERALIGNED1;
-  htim_left.Init.Period            = SystemCoreClock / 2 / PWM_FREQ; // Was 64000000 before SystemCoreClock
+  htim_left.Init.Period            = CORE_FREQ / 2 / PWM_FREQ;
   htim_left.Init.ClockDivision     = TIM_CLOCKDIVISION_DIV1;
   htim_left.Init.RepetitionCounter = 0;
   htim_left.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
@@ -273,16 +331,8 @@ void MX_ADC_Init(void) {
   hadc.Init.DataAlign             = ADC_DATAALIGN_RIGHT;
   hadc.Init.NbrOfConversion       = 8;
   HAL_ADC_Init(&hadc);
-  /**Enable or disable the remapping of ADC1_ETRGREG:
-    * ADC1 External Event regular conversion is connected to TIM8 TRG0
-    */
-  //__HAL_AFIO_REMAP_ADC1_ETRGREG_ENABLE();
 
-  /**Configure the ADC multi-mode
-    */
-  //multimode.Mode = ADC_DUALMODE_REGSIMULT;
   HAL_ADCEx_MultiModeConfigChannel(&hadc, &multimode);
-
   sConfig.SamplingTime = ADC_SAMPLETIME_15CYCLES;
 
   sConfig.Channel = ADC_CHANNEL_5;  // pa5 left b   -> right
@@ -313,7 +363,6 @@ void MX_ADC_Init(void) {
   sConfig.Rank    = 7;
   HAL_ADC_ConfigChannel(&hadc, &sConfig);
 
-  //temperature requires at least 17.1uS sampling time
   sConfig.SamplingTime = ADC_SAMPLETIME_144CYCLES;
   sConfig.Channel = ADC_CHANNEL_TEMPSENSOR;  // internal temp
   sConfig.Rank    = 8;
@@ -340,4 +389,3 @@ void MX_ADC_Init(void) {
 
 
 #endif
-

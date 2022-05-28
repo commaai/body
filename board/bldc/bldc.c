@@ -32,6 +32,9 @@
 #include "BLDC_controller.h"           /* Model's header file */
 #include "rtwtypes.h"
 
+extern hall_sensor hall_left;
+extern hall_sensor hall_right;
+
 extern RT_MODEL *const rtM_Left;
 extern RT_MODEL *const rtM_Right;
 
@@ -67,7 +70,7 @@ static uint8_t  buzzerIdx   = 0;
 uint8_t        enable_motors = 0;        // initially motors are disabled for SAFETY
 static uint8_t enableFin    = 0;
 
-static const uint16_t pwm_res  = 64000000 / 2 / PWM_FREQ; // = 2000 ; TODO: should change to SystemCoreClock ? Needs testing
+static const uint16_t pwm_res  = CORE_FREQ / 2 / PWM_FREQ;
 
 static uint16_t offsetcount = 0;
 static int16_t offsetrlA    = 2000;
@@ -80,6 +83,8 @@ static int16_t offsetdcr    = 2000;
 int16_t        batVoltage       = (400 * BAT_CELLS * BAT_CALIB_ADC) / BAT_CALIB_REAL_VOLTAGE;
 static int32_t batVoltageFixdt  = (400 * BAT_CELLS * BAT_CALIB_ADC) / BAT_CALIB_REAL_VOLTAGE << 16;  // Fixed-point filter output initialized at 400 V*100/cell = 4 V/cell converted to fixed-point
 
+int32_t motPosL = 0;
+int32_t motPosR = 0;
 
 // DMA interrupt frequency =~ 16 kHz
 void DMA2_Stream0_IRQHandler(void) {
@@ -164,9 +169,9 @@ void DMA2_Stream0_IRQHandler(void) {
   enableFin = enable_motors && !rtY_Left.z_errCode && !rtY_Right.z_errCode;
 
   // ========================= LEFT MOTOR ============================
-    uint8_t hall_ul = !(LEFT_HALL_U_PORT->IDR & LEFT_HALL_U_PIN);
-    uint8_t hall_vl = !(LEFT_HALL_V_PORT->IDR & LEFT_HALL_V_PIN);
-    uint8_t hall_wl = !(LEFT_HALL_W_PORT->IDR & LEFT_HALL_W_PIN);
+    uint8_t hall_ul = !(hall_left.hall_portA->IDR & hall_left.hall_pinA);
+    uint8_t hall_vl = !(hall_left.hall_portB->IDR & hall_left.hall_pinB);
+    uint8_t hall_wl = !(hall_left.hall_portC->IDR & hall_left.hall_pinC);
 
     rtU_Left.b_motEna     = enableFin;
     rtU_Left.z_ctrlModReq = ctrlModReq;
@@ -194,9 +199,9 @@ void DMA2_Stream0_IRQHandler(void) {
 
 
   // ========================= RIGHT MOTOR ===========================
-    uint8_t hall_ur = !(RIGHT_HALL_U_PORT->IDR & RIGHT_HALL_U_PIN);
-    uint8_t hall_vr = !(RIGHT_HALL_V_PORT->IDR & RIGHT_HALL_V_PIN);
-    uint8_t hall_wr = !(RIGHT_HALL_W_PORT->IDR & RIGHT_HALL_W_PIN);
+    uint8_t hall_ur = !(hall_right.hall_portA->IDR & hall_right.hall_pinA);
+    uint8_t hall_vr = !(hall_right.hall_portB->IDR & hall_right.hall_pinB);
+    uint8_t hall_wr = !(hall_right.hall_portC->IDR & hall_right.hall_pinC);
 
     rtU_Right.b_motEna      = enableFin;
     rtU_Right.z_ctrlModReq  = ctrlModReq;
@@ -223,4 +228,44 @@ void DMA2_Stream0_IRQHandler(void) {
   // =================================================================
 
   OverrunFlag = false;
+
+  static int16_t motAngleLeftLast = 0;
+  static int16_t motAngleRightLast = 0;
+  static int32_t cycleDegsL = 0;  // wheel encoder roll over count in deg
+  static int32_t cycleDegsR = 0;  // wheel encoder roll over count in deg
+  int16_t diffL = 0;
+  int16_t diffR = 0;
+  static int16_t cnt = 0;
+
+  if (enable_motors == 0) { // Reset everything if motors are disabled
+    cycleDegsL = 0;
+    cycleDegsR = 0;
+    diffL = 0;
+    diffR = 0;
+    cnt = 0;
+  }
+  if (cnt == 0) {
+    motAngleLeftLast = rtY_Left.a_elecAngle;
+    motAngleRightLast = rtY_Right.a_elecAngle;
+  }
+
+  diffL = rtY_Left.a_elecAngle - motAngleLeftLast;
+  if (diffL < -180) {
+    cycleDegsL = cycleDegsL - 360;
+  } else if (diffL > 180) {
+    cycleDegsL = cycleDegsL  + 360;
+  }
+  motPosL = cycleDegsL + (360 - rtY_Left.a_elecAngle);
+
+  diffR = rtY_Right.a_elecAngle - motAngleRightLast;
+  if (diffR < -180) {
+    cycleDegsR = cycleDegsR - 360;
+  } else if (diffR > 180) {
+    cycleDegsR = cycleDegsR  + 360;
+  }
+  motPosR = cycleDegsR + (360 - rtY_Right.a_elecAngle);
+
+  motAngleLeftLast = rtY_Left.a_elecAngle;
+  motAngleRightLast = rtY_Right.a_elecAngle;
+  cnt++;
 }

@@ -3,7 +3,7 @@
 #define CAN_SEQ1 6U // roundf(quanta * 0.875f) - 1;
 #define CAN_SEQ2 1U // roundf(quanta * 0.125f);
 
-#define CAN_PCLK 36000U
+#define CAN_PCLK (CORE_FREQ / 2U / 1000U)
 // 333 = 33.3 kbps
 // 5000 = 500 kbps
 #define can_speed_to_prescaler(x) (CAN_PCLK / CAN_QUANTA * 10U / (x))

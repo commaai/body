@@ -51,7 +51,13 @@ int main(void) {
   HAL_NVIC_SetPriority(SysTick_IRQn, 0, 0);
 
   SystemClock_Config();
-  MX_GPIO_Init();
+  MX_GPIO_Clocks_Init();
+
+  hw_type = board_id();
+  if (hw_type == HW_TYPE_BASE) {
+    MX_GPIO_LED_Base_Init();
+  }
+  MX_GPIO_Common_Init();
 
   out_enable(POWERSWITCH, true);
   out_enable(LED_RED, false);
@@ -64,6 +70,7 @@ int main(void) {
       HAL_Delay(10);
       cnt_press++;
       if (cnt_press == (RECOVERY_MODE_DELAY * 100)) {
+        out_enable(LED_GREEN, true);
         soft_flasher_start();
       }
     }

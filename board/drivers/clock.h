@@ -29,7 +29,7 @@ void SystemClock_Config(void) {
   RCC_OscInitStruct.PLL.PLLSource       = RCC_PLLSOURCE_HSI;
 
   RCC_OscInitStruct.PLL.PLLM            = 8;
-  RCC_OscInitStruct.PLL.PLLN            = 72;
+  RCC_OscInitStruct.PLL.PLLN            = 72; // Gives 72 Mhz core clock
   RCC_OscInitStruct.PLL.PLLP            = RCC_PLLP_DIV2;
   RCC_OscInitStruct.PLL.PLLQ            = 2;
   RCC_OscInitStruct.PLL.PLLR            = 2;

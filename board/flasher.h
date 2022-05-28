@@ -26,6 +26,7 @@ bool unlocked = false;
 
 #define CAN CAN2
 
+// Also being offset by hw_type value*2, for different board types
 #define CAN_BL_INPUT 0x1
 #define CAN_BL_OUTPUT 0x2
 
@@ -146,12 +147,12 @@ void bl_can_send(uint8_t *odat) {
   CAN->sTxMailBox[0].TDLR = ((uint32_t*)odat)[0];
   CAN->sTxMailBox[0].TDHR = ((uint32_t*)odat)[1];
   CAN->sTxMailBox[0].TDTR = 8;
-  CAN->sTxMailBox[0].TIR = (CAN_BL_OUTPUT << 21) | 1;
+  CAN->sTxMailBox[0].TIR = ((CAN_BL_OUTPUT+(hw_type*2U)) << 21) | 1;
 }
 
 void CAN2_RX0_IRQHandler(void) {
   while (CAN->RF0R & CAN_RF0R_FMP0) {
-    if ((CAN->sFIFOMailBox[0].RIR>>21) == CAN_BL_INPUT) {
+    if ((CAN->sFIFOMailBox[0].RIR>>21) == (CAN_BL_INPUT+(hw_type*2U))) {
       uint8_t dat[8];
       for (int i = 0; i < 8; i++) {
         dat[i] = GET_MAILBOX_BYTE(&CAN->sFIFOMailBox[0], i);
@@ -264,8 +265,10 @@ void soft_flasher_start(void) {
   llcan_set_speed(CAN, 5000, false, false);
   llcan_init(CAN);
 
-  // green LED on for flashing
   out_enable(LED_BLUE, true);
+  // Wait for power button release
+  while(HAL_GPIO_ReadPin(BUTTON_PORT, BUTTON_PIN)) {}
+  out_enable(LED_GREEN, false);
 
   uint64_t cnt = 0;
 

@@ -4,6 +4,7 @@
 
 #include "stm32f4xx_hal.h"
 
+#define CORE_FREQ           72000000U // MCU frequency in hertz
 #define PWM_FREQ            16000     // PWM frequency in Hz / is also used for buzzer
 #define DEAD_TIME              48     // PWM deadtime
 #define DELAY_IN_MAIN_LOOP      5     // in ms. default 5. it is independent of all the timing critical stuff. do not touch if you do not know what you are doing.
@@ -12,6 +13,8 @@
 #define ADC_CONV_CLOCK_CYCLES   (ADC_SAMPLETIME_15CYCLES)
 #define ADC_CLOCK_DIV           (4)
 #define ADC_TOTAL_CONV_TIME     (ADC_CLOCK_DIV * ADC_CONV_CLOCK_CYCLES) // = ((SystemCoreClock / ADC_CLOCK_HZ) * ADC_CONV_CLOCK_CYCLES), where ADC_CLOCK_HZ = SystemCoreClock/ADC_CLOCK_DIV
+
+#define ANGLE_TO_DEGREES        0.021972656 // Convert 14 bit angle sensor output to degrees
 
 #define BAT_FILT_COEF           655       // battery voltage filter coefficient in fixed-point. coef_fixedPoint = coef_floatingPoint * 2^16. In this case 655 = 0.01 * 2^16
 #define BAT_CALIB_REAL_VOLTAGE  3192      // input voltage measured by multimeter (multiplied by 100). In this case 43.00 V * 100 = 4300
