@@ -120,6 +120,9 @@ int main(void) {
   int32_t board_temp_adcFixdt = adc_buffer.temp << 16;  // Fixed-point filter output initialized with current ADC converted to fixed-point
   int16_t board_temp_adcFilt  = adc_buffer.temp;
 
+  #define GEARBOX_RATIO_LEFT 19
+  #define GEARBOX_RATIO_RIGHT 19
+
   uint8_t angle_sensor_error = 0;
   uint16_t sensor_angle[SENSOR_COUNT] = { 0 };
   uint16_t hall_angle_offset[SENSOR_COUNT] = { 0 };
@@ -158,10 +161,10 @@ int main(void) {
       if (hw_type == HW_TYPE_KNEE) {
         angle_sensor_read(sensor_angle);
         // Safety to stop operation if angle sensor reading failed TODO: adjust sensivity and add lowpass to angle sensor?
-        if ((ABS((hall_angle_offset[0] + ((motPosL / 15 / 11) % 360)) - (sensor_angle[0] * ANGLE_TO_DEGREES)) > 5) ||
-            (ABS((hall_angle_offset[1] + ((motPosR / 15 / 11) % 360)) - (sensor_angle[1] * ANGLE_TO_DEGREES)) > 5)) {
-          angle_sensor_error = 1;
-          cmdL = cmdR = 0;
+        if ((ABS((hall_angle_offset[0] + ((motPosL / 15 / GEARBOX_RATIO_LEFT) % 360)) - (sensor_angle[0] * ANGLE_TO_DEGREES)) > 5) ||
+            (ABS((hall_angle_offset[1] + ((motPosR / 15 / GEARBOX_RATIO_RIGHT) % 360)) - (sensor_angle[1] * ANGLE_TO_DEGREES)) > 5)) {
+          angle_sensor_error += 1;
+          //cmdL = cmdR = 0;
         }
         // Safety to stop movement when reaching dead angles, around 20 and 340 degrees
         if (((sensor_angle[0] < 900) && (cmdL < 0)) || ((sensor_angle[0] > 15500) && (cmdL > 0))) {
@@ -173,14 +176,14 @@ int main(void) {
       }
 
       if (hw_type == HW_TYPE_KNEE) {
-        if ((ABS(cmdL) < 20) || angle_sensor_error) {
+        if ((ABS(cmdL) < 20) /*|| angle_sensor_error*/) {
           rtP_Left.n_cruiseMotTgt   = 0;
           rtP_Left.b_cruiseCtrlEna  = 1;
         } else {
           rtP_Left.b_cruiseCtrlEna  = 0;
           pwml = -CLAMP((int)cmdL, -1000, 1000);
         }
-        if ((ABS(cmdR) < 20) || angle_sensor_error) {
+        if ((ABS(cmdR) < 20) /*|| angle_sensor_error*/) {
           rtP_Right.n_cruiseMotTgt  = 0;
           rtP_Right.b_cruiseCtrlEna = 1;
         } else {
@@ -233,8 +236,8 @@ int main(void) {
           uint16_t one;
           uint16_t two;
           if (hw_type == HW_TYPE_KNEE) {
-            one = hall_angle_offset[0] + ((motPosL / 15 / 11) % 360);
-            two = hall_angle_offset[1] + ((motPosR / 15 / 11) % 360);
+            one = hall_angle_offset[0] + ((motPosL / 15 / GEARBOX_RATIO_LEFT) % 360);
+            two = hall_angle_offset[1] + ((motPosR / 15 / GEARBOX_RATIO_RIGHT) % 360);
           } else {
             one = motPosL / 15;
             two = -motPosR / 15;
@@ -249,6 +252,12 @@ int main(void) {
           dat[6] = (two>>8U) & 0xFFU;
           dat[7] = two & 0xFFU;
           can_send_msg((0x205U + can_addr_offset), ((dat[7] << 24U) | (dat[6] << 16U) | (dat[5] << 8U) | dat[4]), ((dat[3] << 24U) | (dat[2] << 16U) | (dat[1] << 8U) | dat[0]), 8U);
+
+          /// TEST MSG FOR SENSOR ERROR COUNTER
+          if (angle_sensor_error > 0) {
+            can_send_msg((0x20U), (0x0U), (0x0U), 1U);
+            angle_sensor_error -= 1;
+          }
         }
       }
 

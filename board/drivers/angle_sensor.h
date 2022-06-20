@@ -51,7 +51,7 @@ void angle_sensor_read(uint16_t *sensor_angle) {
       if (angle_data[i] & SPI_CMD_READ) {
         error_flag_set = true;
       } else {
-        if ((sensor_angle[i] == 0) || (ABS(sensor_angle[i] - (angle_data[i] & 0x3fff)) < 200)) {
+        if ((sensor_angle[i] == 0) || (ABS(sensor_angle[i] - (angle_data[i] & 0x3fff)) < 400)) {
           sensor_angle[i] = (angle_data[i] & 0x3fff);
         }
       }
