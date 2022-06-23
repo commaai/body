@@ -58,29 +58,6 @@
 #define BATT_PIN GPIO_PIN_4
 #define BATT_PORT GPIOA
 
-#define SPI3_SCK_PIN GPIO_PIN_10
-#define SPI3_MISO_PIN GPIO_PIN_11
-#define SPI3_MOSI_PIN GPIO_PIN_12
-#define SPI3_PORT GPIOC
-
-#define AS5048_CS_PORT GPIOB
-#define AS5048A_CS_PIN GPIO_PIN_2
-
-// GREEN
-#define LED_GREEN_PIN GPIO_PIN_15
-#define LED_GREEN_PORT GPIOA
-
-// RED (only for base)
-#define LED_RED_PIN GPIO_PIN_2
-#define LED_RED_PORT GPIOD
-
-// BLUE (only for base)
-#define LED_BLUE_PIN GPIO_PIN_1
-#define LED_BLUE_PORT GPIOC
-
-#define CAN_STBY_PIN GPIO_PIN_7
-#define CAN_STBY_PORT GPIOB
-
 #define IGNITION_PIN GPIO_PIN_9
 #define IGNITION_PORT GPIOB
 
@@ -148,7 +125,7 @@
 #define TRANSCEIVER 5
 
 #define HW_TYPE_BASE 0
-#define HW_TYPE_KNEE 1
+#define HW_TYPE_KNEE 3
 
 typedef struct {
   uint32_t rrB;
@@ -169,6 +146,31 @@ typedef struct {
   GPIO_TypeDef* hall_portC;
   uint16_t hall_pinC;
 } hall_sensor;
+
+typedef struct {
+  hall_sensor hall_left;
+  hall_sensor hall_right;
+
+  CAN_TypeDef* CAN;
+  uint8_t can_alt_tx;
+  uint8_t can_alt_rx;
+  GPIO_TypeDef* can_portTX;
+  uint16_t can_pinTX;
+  GPIO_TypeDef* can_portRX;
+  uint16_t can_pinRX;
+  GPIO_TypeDef* can_portEN;
+  uint16_t can_pinEN;
+
+  uint32_t can_addr_offset;
+
+  GPIO_TypeDef* led_portR;
+  uint16_t led_pinR;
+  GPIO_TypeDef* led_portG;
+  uint16_t led_pinG;
+  GPIO_TypeDef* led_portB;
+  uint16_t led_pinB;
+
+} board_t;
 
 uint8_t hw_type;                 // type of the board detected(0 - base, 1 - knee)
 

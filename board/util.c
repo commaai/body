@@ -19,6 +19,8 @@ extern uint8_t ignition;                // global variable for ignition on SBU2 
 
 extern uint8_t hw_type;
 
+extern board_t board;
+
 //------------------------------------------------------------------------
 // Matlab defines - from auto-code generation
 //---------------
@@ -83,17 +85,13 @@ void BLDC_Init(void) {
 void out_enable(uint8_t out, bool enabled) {
   switch(out) {
     case LED_GREEN:
-      HAL_GPIO_WritePin(LED_GREEN_PORT, LED_GREEN_PIN, !enabled);
+      HAL_GPIO_WritePin(board.led_portG, board.led_pinG, !enabled);
       break;
     case LED_RED:
-      if (hw_type == HW_TYPE_BASE) {
-        HAL_GPIO_WritePin(LED_RED_PORT, LED_RED_PIN, !enabled);
-      }
+      HAL_GPIO_WritePin(board.led_portR, board.led_pinR, !enabled);
       break;
     case LED_BLUE:
-      if (hw_type == HW_TYPE_BASE) {
-        HAL_GPIO_WritePin(LED_BLUE_PORT, LED_BLUE_PIN, !enabled);
-      }
+      HAL_GPIO_WritePin(board.led_portB, board.led_pinB, !enabled);
       break;
     case IGNITION:
       HAL_GPIO_WritePin(IGNITION_PORT, IGNITION_PIN, enabled);
@@ -102,7 +100,7 @@ void out_enable(uint8_t out, bool enabled) {
       HAL_GPIO_WritePin(OFF_PORT, OFF_PIN, enabled);
       break;
     case TRANSCEIVER:
-      HAL_GPIO_WritePin(CAN_STBY_PORT, CAN_STBY_PIN, !enabled);
+      HAL_GPIO_WritePin(board.can_portEN, board.can_pinEN, !enabled);
       break;
   }
 }
@@ -170,7 +168,7 @@ void poweroff(void) {
   out_enable(POWERSWITCH, false);
   while(1) {
     // Temporarily, to see that we went to power off but can't switch the latch
-    HAL_GPIO_TogglePin(LED_RED_PORT, LED_RED_PIN);
+    HAL_GPIO_TogglePin(board.led_portR, board.led_pinR);
     HAL_Delay(100);
   }
 }

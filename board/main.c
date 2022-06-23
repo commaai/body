@@ -23,7 +23,6 @@
 extern TIM_HandleTypeDef htim_left;
 extern TIM_HandleTypeDef htim_right;
 extern ADC_HandleTypeDef hadc;
-extern SPI_HandleTypeDef hspi3;
 extern volatile adc_buf_t adc_buffer;
 
 // Matlab defines - from auto-code generation
@@ -49,6 +48,8 @@ extern int16_t batVoltage;              // global variable for battery voltage
 extern int32_t motPosL;
 extern int32_t motPosR;
 
+extern board_t board;
+
 //------------------------------------------------------------------------
 // Global variables set here in main.c
 //------------------------------------------------------------------------
@@ -60,8 +61,6 @@ int16_t batVoltageCalib;         // global variable for calibrated battery volta
 int16_t board_temp_deg_c;        // global variable for calibrated temperature in degrees Celsius
 volatile int16_t cmdL;                    // global variable for Left Command
 volatile int16_t cmdR;                    // global variable for Right Command
-
-uint32_t can_addr_offset;         // CAN messages addresses offset between different board types
 
 uint8_t ignition = 0;            // global variable for ignition on SBU2 line
 uint8_t charger_connected = 0;   // status of the charger port
@@ -110,10 +109,8 @@ int main(void) {
   out_enable(LED_GREEN, false);
   out_enable(LED_BLUE, false);
 
-  __HAL_RCC_CAN1_CLK_ENABLE(); // Also needed for CAN2, dumb...
-  __HAL_RCC_CAN2_CLK_ENABLE();
-  llcan_set_speed(CAN2, 5000, false, false);
-  llcan_init(CAN2);
+  llcan_set_speed(board.CAN, 5000, false, false);
+  llcan_init(board.CAN);
 
   poweronMelody();
 
@@ -138,7 +135,11 @@ int main(void) {
       if (ignition == 0) {
         cmdL = cmdR = 0;
         enable_motors = 0;
-      }
+      } //else {
+      //   enable_motors = 1;
+      //   torque_cmd_timeout = 0;
+      //   cmdL = cmdR = 100;
+      // }
       if (!enable_motors || (torque_cmd_timeout > 20)) {
         cmdL = 0;
         cmdR = 0;
@@ -218,7 +219,7 @@ int main(void) {
           dat[5] = 0; // TODO: remove from OP and dbc, no value
           dat[6] = pkt_idx;
           dat[7] = crc_checksum(dat, 7, crc_poly);
-          can_send_msg((0x201U + can_addr_offset), ((dat[7] << 24U) | (dat[6] << 16U) | (dat[5]<< 8U) | dat[4]), ((dat[3] << 24U) | (dat[2] << 16U) | (dat[1] << 8U) | dat[0]), 8U);
+          can_send_msg((0x201U + board.can_addr_offset), ((dat[7] << 24U) | (dat[6] << 16U) | (dat[5]<< 8U) | dat[4]), ((dat[3] << 24U) | (dat[2] << 16U) | (dat[1] << 8U) | dat[0]), 8U);
           ++pkt_idx;
           pkt_idx &= 0xFU;
 
@@ -231,7 +232,7 @@ int main(void) {
           dat[5] = rtU_Right.i_phaAB & 0xFFU;
           dat[6] = (rtU_Right.i_phaBC >> 8U) & 0xFFU;
           dat[7] = rtU_Right.i_phaBC & 0xFFU;
-          can_send_msg((0x204U + can_addr_offset), ((dat[7] << 24U) | (dat[6] << 16U) | (dat[5] << 8U) | dat[4]), ((dat[3] << 24U) | (dat[2] << 16U) | (dat[1] << 8U) | dat[0]), 8U);
+          can_send_msg((0x204U + board.can_addr_offset), ((dat[7] << 24U) | (dat[6] << 16U) | (dat[5] << 8U) | dat[4]), ((dat[3] << 24U) | (dat[2] << 16U) | (dat[1] << 8U) | dat[0]), 8U);
 
           uint16_t one;
           uint16_t two;
@@ -251,7 +252,7 @@ int main(void) {
           dat[5] = one & 0xFFU;
           dat[6] = (two>>8U) & 0xFFU;
           dat[7] = two & 0xFFU;
-          can_send_msg((0x205U + can_addr_offset), ((dat[7] << 24U) | (dat[6] << 16U) | (dat[5] << 8U) | dat[4]), ((dat[3] << 24U) | (dat[2] << 16U) | (dat[1] << 8U) | dat[0]), 8U);
+          can_send_msg((0x205U + board.can_addr_offset), ((dat[7] << 24U) | (dat[6] << 16U) | (dat[5] << 8U) | dat[4]), ((dat[3] << 24U) | (dat[2] << 16U) | (dat[1] << 8U) | dat[0]), 8U);
 
           /// TEST MSG FOR SENSOR ERROR COUNTER
           if (angle_sensor_error > 0) {
@@ -269,7 +270,7 @@ int main(void) {
           dat[0] = (((fault_status & 0x3F) << 2U) | (enable_motors << 1U) | ignition);
           dat[1] = rtY_Left.z_errCode;
           dat[2] = rtY_Right.z_errCode;
-          can_send_msg((0x202U + can_addr_offset), 0x0U, ((dat[2] << 16U) | (dat[1] << 8U) | dat[0]), 3U);
+          can_send_msg((0x202U + board.can_addr_offset), 0x0U, ((dat[2] << 16U) | (dat[1] << 8U) | dat[0]), 3U);
         }
         out_enable(LED_GREEN, ignition);
       }
@@ -285,7 +286,7 @@ int main(void) {
         dat[1] = (batVoltageCalib >> 8U) & 0xFFU;
         dat[2] = batVoltageCalib & 0xFFU;
         dat[3] = (((battery_percent & 0x7FU) << 1U) | charger_connected);
-        can_send_msg((0x203U + can_addr_offset), 0x0U, ((dat[3] << 24U) | (dat[2] << 16U) | (dat[1] << 8U) | dat[0]), 4U);
+        can_send_msg((0x203U + board.can_addr_offset), 0x0U, ((dat[3] << 24U) | (dat[2] << 16U) | (dat[1] << 8U) | dat[0]), 4U);
 
         out_enable(LED_BLUE, false); // Reset LED after CAN RX
         out_enable(LED_GREEN, true); // Always use LED to show that body is on

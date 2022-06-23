@@ -98,12 +98,20 @@ bool llcan_init(CAN_TypeDef *CAN_obj) {
     CAN1->IER = 0U; // When we want to use only CAN2 - need to do that
     CAN_obj->IER = CAN_IER_FMPIE0 | CAN_IER_TMEIE | CAN_IER_WKUIE;
 
-    HAL_NVIC_SetPriority(CAN2_TX_IRQn, 0, 0);
-    HAL_NVIC_EnableIRQ(CAN2_TX_IRQn);
-    HAL_NVIC_SetPriority(CAN2_RX0_IRQn, 0, 0);
-    HAL_NVIC_EnableIRQ(CAN2_RX0_IRQn);
-    HAL_NVIC_SetPriority(CAN2_SCE_IRQn, 0, 0);
-    HAL_NVIC_EnableIRQ(CAN2_SCE_IRQn);
+    if (CAN_obj == CAN1) {
+      HAL_NVIC_EnableIRQ(CAN1_TX_IRQn);
+      HAL_NVIC_SetPriority(CAN1_RX0_IRQn, 0, 0);
+      HAL_NVIC_EnableIRQ(CAN1_RX0_IRQn);
+      HAL_NVIC_SetPriority(CAN1_SCE_IRQn, 0, 0);
+      HAL_NVIC_EnableIRQ(CAN1_SCE_IRQn);
+    } else {
+      HAL_NVIC_SetPriority(CAN2_TX_IRQn, 0, 0);
+      HAL_NVIC_EnableIRQ(CAN2_TX_IRQn);
+      HAL_NVIC_SetPriority(CAN2_RX0_IRQn, 0, 0);
+      HAL_NVIC_EnableIRQ(CAN2_RX0_IRQn);
+      HAL_NVIC_SetPriority(CAN2_SCE_IRQn, 0, 0);
+      HAL_NVIC_EnableIRQ(CAN2_SCE_IRQn);
+    }
   }
   return ret;
 }

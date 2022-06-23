@@ -7,11 +7,11 @@
 TIM_HandleTypeDef htim_right;
 TIM_HandleTypeDef htim_left;
 ADC_HandleTypeDef hadc;
-SPI_HandleTypeDef hspi3;
+I2C_HandleTypeDef hi2c1;
+// SPI_HandleTypeDef hspi3;
 
 volatile adc_buf_t adc_buffer;
-hall_sensor hall_left;
-hall_sensor hall_right;
+extern board_t board;
 
 
 void MX_GPIO_Clocks_Init(void) {
@@ -20,6 +20,9 @@ void MX_GPIO_Clocks_Init(void) {
   __HAL_RCC_GPIOB_CLK_ENABLE();
   __HAL_RCC_GPIOC_CLK_ENABLE();
   __HAL_RCC_GPIOD_CLK_ENABLE();
+
+  __HAL_RCC_CAN1_CLK_ENABLE();
+  __HAL_RCC_CAN2_CLK_ENABLE();
 }
 
 void MX_GPIO_Common_Init(void) {
@@ -29,23 +32,23 @@ void MX_GPIO_Common_Init(void) {
   GPIO_InitStruct.Pull  = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
 
-  GPIO_InitStruct.Pin = hall_left.hall_pinA;
-  HAL_GPIO_Init(hall_left.hall_portA, &GPIO_InitStruct);
+  GPIO_InitStruct.Pin = board.hall_left.hall_pinA;
+  HAL_GPIO_Init(board.hall_left.hall_portA, &GPIO_InitStruct);
 
-  GPIO_InitStruct.Pin = hall_left.hall_pinB;
-  HAL_GPIO_Init(hall_left.hall_portB, &GPIO_InitStruct);
+  GPIO_InitStruct.Pin = board.hall_left.hall_pinB;
+  HAL_GPIO_Init(board.hall_left.hall_portB, &GPIO_InitStruct);
 
-  GPIO_InitStruct.Pin = hall_left.hall_pinC;
-  HAL_GPIO_Init(hall_left.hall_portC, &GPIO_InitStruct);
+  GPIO_InitStruct.Pin = board.hall_left.hall_pinC;
+  HAL_GPIO_Init(board.hall_left.hall_portC, &GPIO_InitStruct);
 
-  GPIO_InitStruct.Pin = hall_right.hall_pinA;
-  HAL_GPIO_Init(hall_right.hall_portA, &GPIO_InitStruct);
+  GPIO_InitStruct.Pin = board.hall_right.hall_pinA;
+  HAL_GPIO_Init(board.hall_right.hall_portA, &GPIO_InitStruct);
 
-  GPIO_InitStruct.Pin = hall_right.hall_pinB;
-  HAL_GPIO_Init(hall_right.hall_portB, &GPIO_InitStruct);
+  GPIO_InitStruct.Pin = board.hall_right.hall_pinB;
+  HAL_GPIO_Init(board.hall_right.hall_portB, &GPIO_InitStruct);
 
-  GPIO_InitStruct.Pin = hall_right.hall_pinC;
-  HAL_GPIO_Init(hall_right.hall_portC, &GPIO_InitStruct);
+  GPIO_InitStruct.Pin = board.hall_right.hall_pinC;
+  HAL_GPIO_Init(board.hall_right.hall_portC, &GPIO_InitStruct);
 
   GPIO_InitStruct.Pull = GPIO_PULLUP;
   GPIO_InitStruct.Pin = CHARGER_PIN;
@@ -59,11 +62,19 @@ void MX_GPIO_Common_Init(void) {
 
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
 
-  GPIO_InitStruct.Pin = LED_GREEN_PIN;
-  HAL_GPIO_Init(LED_GREEN_PORT, &GPIO_InitStruct);
+  GPIO_InitStruct.Pin = board.led_pinR;
+  HAL_GPIO_Init(board.led_portR, &GPIO_InitStruct);
 
-  GPIO_InitStruct.Pin = CAN_STBY_PIN;
-  HAL_GPIO_Init(CAN_STBY_PORT, &GPIO_InitStruct);
+  GPIO_InitStruct.Pin = board.led_pinG;
+  HAL_GPIO_Init(board.led_portG, &GPIO_InitStruct);
+
+  GPIO_InitStruct.Pin = board.led_pinB;
+  HAL_GPIO_Init(board.led_portB, &GPIO_InitStruct);
+
+  if (board.can_pinEN != 0) {
+    GPIO_InitStruct.Pin = board.can_pinEN;
+    HAL_GPIO_Init(board.can_portEN, &GPIO_InitStruct);
+  }
 
   GPIO_InitStruct.Pin = IGNITION_PIN;
   HAL_GPIO_Init(IGNITION_PORT, &GPIO_InitStruct);
@@ -139,75 +150,43 @@ void MX_GPIO_Common_Init(void) {
   GPIO_InitStruct.Pin = RIGHT_TIM_WL_PIN;
   HAL_GPIO_Init(RIGHT_TIM_WL_PORT, &GPIO_InitStruct);
 
-  // Pins for CAN2
+  // CAN bus
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
-  GPIO_InitStruct.Alternate = GPIO_AF9_CAN2;
 
-  GPIO_InitStruct.Pin = GPIO_PIN_5;
-  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+  GPIO_InitStruct.Alternate = board.can_alt_rx;
+  GPIO_InitStruct.Pin = board.can_pinRX;
+  HAL_GPIO_Init(board.can_portRX, &GPIO_InitStruct);
 
-  GPIO_InitStruct.Pin = GPIO_PIN_6;
-  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+  GPIO_InitStruct.Alternate = board.can_alt_tx;
+  GPIO_InitStruct.Pin = board.can_pinTX;
+  HAL_GPIO_Init(board.can_portTX, &GPIO_InitStruct);
 }
 
-void MX_GPIO_LED_Base_Init(void) {
-  GPIO_InitTypeDef GPIO_InitStruct;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
 
-  GPIO_InitStruct.Pin = LED_RED_PIN;
-  HAL_GPIO_Init(LED_RED_PORT, &GPIO_InitStruct);
-
-  GPIO_InitStruct.Pin = LED_BLUE_PIN;
-  HAL_GPIO_Init(LED_BLUE_PORT, &GPIO_InitStruct);
-
-}
-
-void MX_SPI3_Init(void) {
+void MX_I2C_Init(void) {
   GPIO_InitTypeDef GPIO_InitStruct;
 
-  GPIO_InitStruct.Pin = AS5048A_CS_PIN;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pin = GPIO_PIN_6|GPIO_PIN_7;
+  GPIO_InitStruct.Mode = GPIO_MODE_AF_OD;
   GPIO_InitStruct.Pull = GPIO_PULLUP;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-  HAL_GPIO_Init(AS5048_CS_PORT, &GPIO_InitStruct);
-  HAL_GPIO_WritePin(AS5048_CS_PORT, AS5048A_CS_PIN, GPIO_PIN_SET);
-
-  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-  GPIO_InitStruct.Alternate = GPIO_AF6_SPI3;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+  GPIO_InitStruct.Alternate = GPIO_AF4_I2C1;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Pin = SPI3_SCK_PIN;
-  HAL_GPIO_Init(SPI3_PORT, &GPIO_InitStruct);
+  __HAL_RCC_I2C1_CLK_ENABLE();
 
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Pin = SPI3_MISO_PIN;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(SPI3_PORT, &GPIO_InitStruct);
-
-  GPIO_InitStruct.Pull = GPIO_PULLDOWN;
-  GPIO_InitStruct.Pin = SPI3_MOSI_PIN;
-  HAL_GPIO_Init(SPI3_PORT, &GPIO_InitStruct);
-
-  __HAL_RCC_SPI3_CLK_ENABLE();
-
-  hspi3.Instance = SPI3;
-  hspi3.Init.Mode = SPI_MODE_MASTER;
-  hspi3.Init.Direction = SPI_DIRECTION_2LINES;
-  hspi3.Init.DataSize = SPI_DATASIZE_16BIT;
-  hspi3.Init.CLKPolarity = SPI_POLARITY_LOW;
-  hspi3.Init.CLKPhase = SPI_PHASE_2EDGE;
-  hspi3.Init.NSS = SPI_NSS_SOFT;
-  hspi3.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_32; // 1.125 MHz at 72MHz clock
-  hspi3.Init.FirstBit = SPI_FIRSTBIT_MSB;
-  hspi3.Init.TIMode = SPI_TIMODE_DISABLE;
-  hspi3.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
-  hspi3.Init.CRCPolynomial = 10;
-
-  HAL_SPI_Init(&hspi3);
+  hi2c1.Instance = I2C1;
+  hi2c1.Init.ClockSpeed = 400000;
+  hi2c1.Init.DutyCycle = I2C_DUTYCYCLE_2;
+  hi2c1.Init.OwnAddress1 = 0;
+  hi2c1.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
+  hi2c1.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
+  hi2c1.Init.OwnAddress2 = 0;
+  hi2c1.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
+  hi2c1.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
+  HAL_I2C_Init(&hi2c1);
 }
+
 
 void MX_TIM_Init(void) {
   __HAL_RCC_TIM1_CLK_ENABLE();

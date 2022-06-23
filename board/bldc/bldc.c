@@ -32,8 +32,7 @@
 #include "BLDC_controller.h"           /* Model's header file */
 #include "rtwtypes.h"
 
-extern hall_sensor hall_left;
-extern hall_sensor hall_right;
+extern board_t board;
 
 extern RT_MODEL *const rtM_Left;
 extern RT_MODEL *const rtM_Right;
@@ -169,9 +168,9 @@ void DMA2_Stream0_IRQHandler(void) {
   enableFin = enable_motors && !rtY_Left.z_errCode && !rtY_Right.z_errCode;
 
   // ========================= LEFT MOTOR ============================
-    uint8_t hall_ul = !(hall_left.hall_portA->IDR & hall_left.hall_pinA);
-    uint8_t hall_vl = !(hall_left.hall_portB->IDR & hall_left.hall_pinB);
-    uint8_t hall_wl = !(hall_left.hall_portC->IDR & hall_left.hall_pinC);
+    uint8_t hall_ul = !(board.hall_left.hall_portA->IDR & board.hall_left.hall_pinA);
+    uint8_t hall_vl = !(board.hall_left.hall_portB->IDR & board.hall_left.hall_pinB);
+    uint8_t hall_wl = !(board.hall_left.hall_portC->IDR & board.hall_left.hall_pinC);
 
     rtU_Left.b_motEna     = enableFin;
     rtU_Left.z_ctrlModReq = ctrlModReq;
@@ -199,9 +198,9 @@ void DMA2_Stream0_IRQHandler(void) {
 
 
   // ========================= RIGHT MOTOR ===========================
-    uint8_t hall_ur = !(hall_right.hall_portA->IDR & hall_right.hall_pinA);
-    uint8_t hall_vr = !(hall_right.hall_portB->IDR & hall_right.hall_pinB);
-    uint8_t hall_wr = !(hall_right.hall_portC->IDR & hall_right.hall_pinC);
+    uint8_t hall_ur = !(board.hall_right.hall_portA->IDR & board.hall_right.hall_pinA);
+    uint8_t hall_vr = !(board.hall_right.hall_portB->IDR & board.hall_right.hall_pinB);
+    uint8_t hall_wr = !(board.hall_right.hall_portC->IDR & board.hall_right.hall_pinC);
 
     rtU_Right.b_motEna      = enableFin;
     rtU_Right.z_ctrlModReq  = ctrlModReq;

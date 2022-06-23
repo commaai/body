@@ -1,46 +1,79 @@
-extern hall_sensor hall_left;
-extern hall_sensor hall_right;
-uint32_t can_addr_offset;
+board_t board;
 
 void board_detect(void) {
   hw_type = board_id();
-  // 0 = base, 1 = knee
+  // 0 = base, 3 = knee
   if (hw_type == HW_TYPE_BASE) {
-    hall_left.hall_portA = GPIOC;
-    hall_left.hall_pinA = GPIO_PIN_13;
-    hall_left.hall_portB = GPIOC;
-    hall_left.hall_pinB = GPIO_PIN_14;
-    hall_left.hall_portC = GPIOC;
-    hall_left.hall_pinC = GPIO_PIN_15;
+    board.hall_left.hall_portA = GPIOC;
+    board.hall_left.hall_pinA = GPIO_PIN_13;
+    board.hall_left.hall_portB = GPIOC;
+    board.hall_left.hall_pinB = GPIO_PIN_14;
+    board.hall_left.hall_portC = GPIOC;
+    board.hall_left.hall_pinC = GPIO_PIN_15;
 
-    hall_right.hall_portA = GPIOC;
-    hall_right.hall_pinA = GPIO_PIN_10;
-    hall_right.hall_portB = GPIOC;
-    hall_right.hall_pinB = GPIO_PIN_11;
-    hall_right.hall_portC = GPIOC;
-    hall_right.hall_pinC = GPIO_PIN_12;
+    board.hall_right.hall_portA = GPIOC;
+    board.hall_right.hall_pinA = GPIO_PIN_10;
+    board.hall_right.hall_portB = GPIOC;
+    board.hall_right.hall_pinB = GPIO_PIN_11;
+    board.hall_right.hall_portC = GPIOC;
+    board.hall_right.hall_pinC = GPIO_PIN_12;
 
-    can_addr_offset = 0x0U;
+    board.CAN = CAN2;
+    board.can_alt_tx = GPIO_AF9_CAN2;
+    board.can_alt_rx = GPIO_AF9_CAN2;
+    board.can_pinRX = GPIO_PIN_5;
+    board.can_portRX = GPIOB;
+    board.can_pinTX = GPIO_PIN_6;
+    board.can_portTX = GPIOB;
+    board.can_pinEN = GPIO_PIN_7;
+    board.can_portEN = GPIOB;
 
-    MX_GPIO_LED_Base_Init();
+    board.led_pinR = GPIO_PIN_2;
+    board.led_portR = GPIOD;
+    board.led_pinG = GPIO_PIN_15;
+    board.led_portG = GPIOA;
+    board.led_pinB = GPIO_PIN_1;
+    board.led_portB = GPIOC;
+
+    board.can_addr_offset = 0x0U;
+
   } else if (hw_type == HW_TYPE_KNEE) {
-    hall_left.hall_portA = GPIOC;
-    hall_left.hall_pinA = GPIO_PIN_14;
-    hall_left.hall_portB = GPIOC;
-    hall_left.hall_pinB = GPIO_PIN_15;
-    hall_left.hall_portC = GPIOC;
-    hall_left.hall_pinC = GPIO_PIN_13;
+    board.hall_left.hall_portA = GPIOC;
+    board.hall_left.hall_pinA = GPIO_PIN_14;
+    board.hall_left.hall_portB = GPIOC;
+    board.hall_left.hall_pinB = GPIO_PIN_15;
+    board.hall_left.hall_portC = GPIOC;
+    board.hall_left.hall_pinC = GPIO_PIN_13;
 
-    hall_right.hall_portA = GPIOD;
-    hall_right.hall_pinA = GPIO_PIN_2;
-    hall_right.hall_portB = GPIOC;
-    hall_right.hall_pinB = GPIO_PIN_0;
-    hall_right.hall_portC = GPIOC;
-    hall_right.hall_pinC = GPIO_PIN_1;
+    board.hall_right.hall_portA = GPIOD;
+    board.hall_right.hall_pinA = GPIO_PIN_2;
+    board.hall_right.hall_portB = GPIOC;
+    board.hall_right.hall_pinB = GPIO_PIN_0;
+    board.hall_right.hall_portC = GPIOC;
+    board.hall_right.hall_pinC = GPIO_PIN_1;
 
-    can_addr_offset = 0x100U;
+    board.CAN = CAN1;
+    board.can_alt_tx = GPIO_AF8_CAN1;
+    board.can_alt_rx = GPIO_AF9_CAN1;
+    board.can_pinRX = GPIO_PIN_11;
+    board.can_portRX = GPIOA;
+    board.can_pinTX = GPIO_PIN_9;
+    board.can_portTX = GPIOB;
+    board.can_pinEN = 0; // No pin, pulled down with 10k resistor
+    board.can_portEN = GPIOB;
 
-    MX_SPI3_Init();
+    board.led_pinR = GPIO_PIN_2;
+    board.led_portR = GPIOB;
+    board.led_pinG = GPIO_PIN_15;
+    board.led_portG = GPIOA;
+    board.led_pinB = GPIO_PIN_5;
+    board.led_portB = GPIOB;
+
+    board.can_addr_offset = 0x100U;
+
+    #ifndef BOOTSTUB
+    MX_I2C_Init();
+    #endif
   } else {
     // Fail to detect, halt
     while(1) {}

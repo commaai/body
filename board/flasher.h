@@ -237,7 +237,7 @@ void check_powerdown(void) {
         out_enable(POWERSWITCH, false);
         while(1) {
           // Temporarily, to see that we went to power off but can't switch the latch
-          HAL_GPIO_TogglePin(LED_RED_PORT, LED_RED_PIN);
+          HAL_GPIO_TogglePin(board.led_portR, board.led_pinR);
           HAL_Delay(100);
         }
       }

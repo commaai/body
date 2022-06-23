@@ -25,6 +25,7 @@
 #include "drivers/llflash.h"
 #include "provision.h"
 #include "util.h"
+#include "boards.h"
 
 #include "flasher.h"
 
@@ -53,10 +54,7 @@ int main(void) {
   SystemClock_Config();
   MX_GPIO_Clocks_Init();
 
-  hw_type = board_id();
-  if (hw_type == HW_TYPE_BASE) {
-    MX_GPIO_LED_Base_Init();
-  }
+  board_detect();
   MX_GPIO_Common_Init();
 
   out_enable(POWERSWITCH, true);
