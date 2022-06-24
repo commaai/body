@@ -100,10 +100,16 @@ int main(void) {
 
   HAL_ADC_Start(&hadc);
 
-  out_enable(POWERSWITCH, true);
-  out_enable(IGNITION, ignition);
-  out_enable(TRANSCEIVER, true);
-
+  if (hw_type == HW_TYPE_BASE) {
+    out_enable(POWERSWITCH, true);
+    out_enable(IGNITION, ignition);
+    out_enable(TRANSCEIVER, true);
+    // Loop until button is released, only for base board
+    while(HAL_GPIO_ReadPin(BUTTON_PORT, BUTTON_PIN)) { HAL_Delay(10); }
+  } else {
+    out_enable(POWERSWITCH, false);
+    ignition = 1;
+  }
   // Reset LEDs upon startup
   out_enable(LED_RED, false);
   out_enable(LED_GREEN, false);
@@ -124,9 +130,6 @@ int main(void) {
   uint16_t sensor_angle[SENSOR_COUNT] = { 0 };
   uint16_t hall_angle_offset[SENSOR_COUNT] = { 0 };
   angle_sensor_read(sensor_angle);
-
-  // Loop until button is released
-  while(HAL_GPIO_ReadPin(BUTTON_PORT, BUTTON_PIN)) { HAL_Delay(10); }
 
   while(1) {
     if (buzzerTimer - buzzerTimer_prev > 16*DELAY_IN_MAIN_LOOP) {   // 1 ms = 16 ticks buzzerTimer
@@ -299,7 +302,9 @@ int main(void) {
       }
 
       process_can();
-      poweroffPressCheck();
+      if (hw_type == HW_TYPE_BASE) {
+        poweroffPressCheck();
+      }
 
       if ((TEMP_POWEROFF_ENABLE && board_temp_deg_c >= TEMP_POWEROFF && speedAvgAbs < 20) || (batVoltage < BAT_DEAD && speedAvgAbs < 20)) {  // poweroff before mainboard burns OR low bat 3
         poweroff();

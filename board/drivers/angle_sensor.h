@@ -19,10 +19,10 @@ extern I2C_HandleTypeDef hi2c1;
 
 void angle_sensor_read(uint16_t *sensor_angle) {
   uint8_t buf[2];
-  if (HAL_I2C_Mem_Read(&hi2c1, (AS5048_ADDRESS_LEFT<<1), AS5048B_ANGLMSB_REG, I2C_MEMADD_SIZE_8BIT, buf, 2, 100) == HAL_OK) {
+  if (HAL_I2C_Mem_Read(&hi2c1, (AS5048_ADDRESS_LEFT<<1), AS5048B_ANGLMSB_REG, I2C_MEMADD_SIZE_8BIT, buf, 2, 5) == HAL_OK) {
     sensor_angle[0] = (buf[0] << 6) | (buf[1] & 0x3F);
   }
-  if (HAL_I2C_Mem_Read(&hi2c1, (AS5048_ADDRESS_RIGHT<<1), AS5048B_ANGLMSB_REG, I2C_MEMADD_SIZE_8BIT, buf, 2, 100) == HAL_OK) {
+  if (HAL_I2C_Mem_Read(&hi2c1, (AS5048_ADDRESS_RIGHT<<1), AS5048B_ANGLMSB_REG, I2C_MEMADD_SIZE_8BIT, buf, 2, 5) == HAL_OK) {
     sensor_angle[1] = (buf[0] << 6) | (buf[1] & 0x3F);
   }
 }

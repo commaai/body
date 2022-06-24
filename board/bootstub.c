@@ -62,7 +62,7 @@ int main(void) {
   out_enable(LED_GREEN, false);
   out_enable(LED_BLUE, false);
 
-  if(HAL_GPIO_ReadPin(BUTTON_PORT, BUTTON_PIN)) {
+  if(HAL_GPIO_ReadPin(BUTTON_PORT, BUTTON_PIN) && (hw_type == HW_TYPE_BASE)) {
     uint16_t cnt_press = 0;
     while(HAL_GPIO_ReadPin(BUTTON_PORT, BUTTON_PIN)) {
       HAL_Delay(10);
