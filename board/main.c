@@ -127,8 +127,8 @@ int main(void) {
   #define GEARBOX_RATIO_RIGHT 19
 
   uint8_t angle_sensor_error = 0;
-  uint16_t sensor_angle[SENSOR_COUNT] = { 0 };
-  uint16_t hall_angle_offset[SENSOR_COUNT] = { 0 };
+  uint16_t sensor_angle[2] = { 0 };
+  uint16_t hall_angle_offset[2] = { 0 };
   angle_sensor_read(sensor_angle);
 
   while(1) {

@@ -1,5 +1,3 @@
-#define SENSOR_COUNT 2
-
 // Default addresses for AS5048B
 #define AS5048_ADDRESS_LEFT 0x40
 #define AS5048_ADDRESS_RIGHT 0x41
