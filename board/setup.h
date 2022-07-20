@@ -76,8 +76,11 @@ void MX_GPIO_Common_Init(void) {
     HAL_GPIO_Init(board.can_portEN, &GPIO_InitStruct);
   }
 
-  GPIO_InitStruct.Pin = IGNITION_PIN;
-  HAL_GPIO_Init(IGNITION_PORT, &GPIO_InitStruct);
+  if (board.ignition_pin != 0) {
+    GPIO_InitStruct.Pin = board.ignition_pin;
+    HAL_GPIO_Init(board.ignition_port, &GPIO_InitStruct);
+
+  }
 
   GPIO_InitStruct.Pin = BUZZER_PIN;
   HAL_GPIO_Init(BUZZER_PORT, &GPIO_InitStruct);

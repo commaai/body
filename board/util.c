@@ -94,7 +94,7 @@ void out_enable(uint8_t out, bool enabled) {
       HAL_GPIO_WritePin(board.led_portB, board.led_pinB, !enabled);
       break;
     case IGNITION:
-      HAL_GPIO_WritePin(IGNITION_PORT, IGNITION_PIN, enabled);
+      HAL_GPIO_WritePin(board.ignition_port, board.ignition_pin, enabled);
       break;
     case POWERSWITCH:
       HAL_GPIO_WritePin(OFF_PORT, OFF_PIN, enabled);

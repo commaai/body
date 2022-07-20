@@ -28,6 +28,9 @@ void board_detect(void) {
     board.can_pinEN = GPIO_PIN_7;
     board.can_portEN = GPIOB;
 
+    board.ignition_pin = GPIO_PIN_9;
+    board.ignition_port = GPIOB;
+
     board.led_pinR = GPIO_PIN_2;
     board.led_portR = GPIOD;
     board.led_pinG = GPIO_PIN_15;
@@ -62,6 +65,9 @@ void board_detect(void) {
     board.can_pinEN = 0; // No pin, pulled down with 10k resistor
     board.can_portEN = GPIOB;
 
+    board.ignition_pin = 0; // No pin, always enabled
+    board.ignition_port = GPIOB;
+
     board.led_pinR = GPIO_PIN_2;
     board.led_portR = GPIOB;
     board.led_pinG = GPIO_PIN_15;
@@ -69,7 +75,7 @@ void board_detect(void) {
     board.led_pinB = GPIO_PIN_5;
     board.led_portB = GPIOB;
 
-    board.can_addr_offset = 0x100U;
+    board.can_addr_offset = KNEE_ADDR_OFFSET;
 
     #ifndef BOOTSTUB
     MX_I2C_Init();

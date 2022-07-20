@@ -58,9 +58,6 @@
 #define BATT_PIN GPIO_PIN_4
 #define BATT_PORT GPIOA
 
-#define IGNITION_PIN GPIO_PIN_9
-#define IGNITION_PORT GPIOB
-
 #define BUZZER_PIN GPIO_PIN_2
 #define BUZZER_PORT GPIOC
 
@@ -160,6 +157,9 @@ typedef struct {
   uint16_t can_pinRX;
   GPIO_TypeDef* can_portEN;
   uint16_t can_pinEN;
+
+  GPIO_TypeDef* ignition_port;
+  uint16_t ignition_pin;
 
   uint32_t can_addr_offset;
 

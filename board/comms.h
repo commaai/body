@@ -139,6 +139,8 @@ void can_rx(void) {
       }
     } else if ((hw_type == HW_TYPE_BASE) && ((address == BROADCAST_ADDR) || (address == FALLBACK_ADDR) || (address == ECU_ADDR) || (address == DEBUG_ADDR))) { // Process UBS and OBD2 requests, ignore for knee
       process_uds(address, GET_MAILBOX_BYTES_04(&board.CAN->sFIFOMailBox[0]));
+    } else if ((hw_type == HW_TYPE_BASE) && (address == 0x203U + KNEE_ADDR_OFFSET)) { // detect knee by body and set flag for use with UDS message
+      knee_detected = 1;
     }
     out_enable(LED_BLUE, true);
     // next

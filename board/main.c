@@ -138,11 +138,8 @@ int main(void) {
       if (ignition == 0) {
         cmdL = cmdR = 0;
         enable_motors = 0;
-      } //else {
-      //   enable_motors = 1;
-      //   torque_cmd_timeout = 0;
-      //   cmdL = cmdR = 100;
-      // }
+      }
+
       if (!enable_motors || (torque_cmd_timeout > 20)) {
         cmdL = 0;
         cmdR = 0;
@@ -185,14 +182,14 @@ int main(void) {
           rtP_Left.b_cruiseCtrlEna  = 1;
         } else {
           rtP_Left.b_cruiseCtrlEna  = 0;
-          pwml = -CLAMP((int)cmdL, -1000, 1000);
+          pwml = -CLAMP((int)cmdL, -TRQ_LIMIT_LEFT, TRQ_LIMIT_LEFT);
         }
         if ((ABS(cmdR) < 20) /*|| angle_sensor_error*/) {
           rtP_Right.n_cruiseMotTgt  = 0;
           rtP_Right.b_cruiseCtrlEna = 1;
         } else {
           rtP_Right.b_cruiseCtrlEna = 0;
-          pwmr = -CLAMP((int)cmdR, -1000, 1000);
+          pwmr = -CLAMP((int)cmdR, -TRQ_LIMIT_RIGHT, TRQ_LIMIT_RIGHT);
         }
       } else {
         pwml = CLAMP((int)cmdL, -1000, 1000);
@@ -210,7 +207,7 @@ int main(void) {
       // runs at ~100Hz
       if (main_loop_counter % 2 == 0) {
         if (ignition_off_counter <= 10) {
-          // speed_L(2), speed_R(2), hall_angle_L(1), hall_angle_R(1), counter(1), checksum(1)
+          // MOTORS_DATA: speed_L(2), speed_R(2), counter(1), checksum(1)
           uint8_t dat[8];
           uint16_t speedL = rtY_Left.n_mot;
           uint16_t speedR = -(rtY_Right.n_mot); // Invert speed sign for the right wheel
@@ -218,15 +215,13 @@ int main(void) {
           dat[1] = speedL & 0xFFU;
           dat[2] = (speedR >> 8U) & 0xFFU;
           dat[3] = speedR & 0xFFU;
-          dat[4] = 0; // TODO: remove from OP and dbc, no value
-          dat[5] = 0; // TODO: remove from OP and dbc, no value
-          dat[6] = pkt_idx;
-          dat[7] = crc_checksum(dat, 7, crc_poly);
-          can_send_msg((0x201U + board.can_addr_offset), ((dat[7] << 24U) | (dat[6] << 16U) | (dat[5]<< 8U) | dat[4]), ((dat[3] << 24U) | (dat[2] << 16U) | (dat[1] << 8U) | dat[0]), 8U);
+          dat[4] = pkt_idx;
+          dat[5] = crc_checksum(dat, 5, crc_poly);
+          can_send_msg((0x201U + board.can_addr_offset), ((dat[5]<< 8U) | dat[4]), ((dat[3] << 24U) | (dat[2] << 16U) | (dat[1] << 8U) | dat[0]), 6U);
           ++pkt_idx;
           pkt_idx &= 0xFU;
 
-          // left_pha_ab(2), left_pha_bc(2), right_pha_ab(2), right_pha_bc(2)
+          //MOTORS_CURRENT: left_pha_ab(2), left_pha_bc(2), right_pha_ab(2), right_pha_bc(2)
           dat[0] = (rtU_Left.i_phaAB >> 8U) & 0xFFU;
           dat[1] = rtU_Left.i_phaAB & 0xFFU;
           dat[2] = (rtU_Left.i_phaBC >> 8U) & 0xFFU;
@@ -237,38 +232,32 @@ int main(void) {
           dat[7] = rtU_Right.i_phaBC & 0xFFU;
           can_send_msg((0x204U + board.can_addr_offset), ((dat[7] << 24U) | (dat[6] << 16U) | (dat[5] << 8U) | dat[4]), ((dat[3] << 24U) | (dat[2] << 16U) | (dat[1] << 8U) | dat[0]), 8U);
 
-          uint16_t one;
-          uint16_t two;
+          uint16_t left_hall_angle;
+          uint16_t right_hall_angle;
           if (hw_type == HW_TYPE_KNEE) {
-            one = hall_angle_offset[0] + ((motPosL / 15 / GEARBOX_RATIO_LEFT) % 360);
-            two = hall_angle_offset[1] + ((motPosR / 15 / GEARBOX_RATIO_RIGHT) % 360);
+            left_hall_angle = hall_angle_offset[0] + ((motPosL / 15 / GEARBOX_RATIO_LEFT) % 360);
+            right_hall_angle = hall_angle_offset[1] + ((motPosR / 15 / GEARBOX_RATIO_RIGHT) % 360);
           } else {
-            one = motPosL / 15;
-            two = -motPosR / 15;
+            left_hall_angle = motPosL / 15;
+            right_hall_angle = -motPosR / 15;
           }
-          // first angle sensor(2), second angle sensor(2)
+          //MOTORS_ANGLE: left angle sensor(2), right angle sensor(2), left hall angle(2), right hall angle(2)
           dat[0] = (sensor_angle[0]>>8U) & 0xFFU;
           dat[1] = sensor_angle[0] & 0xFFU;
           dat[2] = (sensor_angle[1]>>8U) & 0xFFU;
           dat[3] = sensor_angle[1] & 0xFFU;
-          dat[4] = (one>>8U) & 0xFFU;
-          dat[5] = one & 0xFFU;
-          dat[6] = (two>>8U) & 0xFFU;
-          dat[7] = two & 0xFFU;
+          dat[4] = (left_hall_angle>>8U) & 0xFFU;
+          dat[5] = left_hall_angle & 0xFFU;
+          dat[6] = (right_hall_angle>>8U) & 0xFFU;
+          dat[7] = right_hall_angle & 0xFFU;
           can_send_msg((0x205U + board.can_addr_offset), ((dat[7] << 24U) | (dat[6] << 16U) | (dat[5] << 8U) | dat[4]), ((dat[3] << 24U) | (dat[2] << 16U) | (dat[1] << 8U) | dat[0]), 8U);
-
-          /// TEST MSG FOR SENSOR ERROR COUNTER
-          if (angle_sensor_error > 0) {
-            can_send_msg((0x20U), (0x0U), (0x0U), 1U);
-            angle_sensor_error -= 1;
-          }
         }
       }
 
       // runs at ~10Hz
       if (main_loop_counter % 20 == 0) {
         if (ignition_off_counter <= 10) {
-          // fault_status(0:6), enable_motors(0:1), ignition(0:1), left motor error(1), right motor error(1), global fault status(1)
+          // VAR_VALUES: fault_status(0:6), enable_motors(0:1), ignition(0:1), left motor error(1), right motor error(1), global fault status(1)
           uint8_t dat[2];
           dat[0] = (((fault_status & 0x3F) << 2U) | (enable_motors << 1U) | ignition);
           dat[1] = rtY_Left.z_errCode;
@@ -283,7 +272,7 @@ int main(void) {
         charger_connected = !HAL_GPIO_ReadPin(CHARGER_PORT, CHARGER_PIN);
         uint8_t battery_percent = 100 - (((420 * BAT_CELLS) - batVoltageCalib) / BAT_CELLS / VOLTS_PER_PERCENT / 100); // Battery % left
 
-        // MCU temp(2), battery voltage(2), battery_percent(0:7), charger_connected(0:1)
+        // BODY_DATA: MCU temp(2), battery voltage(2), battery_percent(0:7), charger_connected(0:1)
         uint8_t dat[4];
         dat[0] = board_temp_deg_c & 0xFFU;
         dat[1] = (batVoltageCalib >> 8U) & 0xFFU;
@@ -320,7 +309,7 @@ int main(void) {
         beepCount(0, 10, 30);
       } else {  // do not beep
         beepCount(0, 0, 0);
-        //out_enable(LED_RED, false);
+        out_enable(LED_RED, false);
       }
 
       buzzerTimer_prev = buzzerTimer;
