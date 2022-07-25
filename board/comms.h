@@ -120,6 +120,7 @@ void can_rx(void) {
         }
         current_idx = idx;
       }
+      out_enable(LED_BLUE, true);
     } else if (address == (int32_t)(0x251U + board.can_addr_offset)) {
       #define MSG_SPD_LEN 5
       uint8_t dat[MSG_TRQ_LEN];
@@ -137,12 +138,13 @@ void can_rx(void) {
           rtP_Right.n_max = valueR << 4;
         }
       }
+      out_enable(LED_BLUE, true);
     } else if ((hw_type == HW_TYPE_BASE) && ((address == BROADCAST_ADDR) || (address == FALLBACK_ADDR) || (address == ECU_ADDR) || (address == DEBUG_ADDR))) { // Process UBS and OBD2 requests, ignore for knee
       process_uds(address, GET_MAILBOX_BYTES_04(&board.CAN->sFIFOMailBox[0]));
+      out_enable(LED_BLUE, true);
     } else if ((hw_type == HW_TYPE_BASE) && (address == 0x203U + KNEE_ADDR_OFFSET)) { // detect knee by body and set flag for use with UDS message
       knee_detected = 1;
     }
-    out_enable(LED_BLUE, true);
     // next
     board.CAN->RF0R |= CAN_RF0R_RFOM0;
   }
