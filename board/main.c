@@ -126,7 +126,6 @@ int main(void) {
   #define GEARBOX_RATIO_LEFT 19
   #define GEARBOX_RATIO_RIGHT 19
 
-  uint8_t angle_sensor_error = 0;
   uint16_t sensor_angle[2] = { 0 };
   uint16_t hall_angle_offset[2] = { 0 };
   angle_sensor_read(sensor_angle);
@@ -149,7 +148,6 @@ int main(void) {
         beepShort(6); // make 2 beeps indicating the motor enable
         beepShort(4);
         HAL_Delay(100);
-        angle_sensor_error = 0;
         sensor_angle[0] = 0;
         sensor_angle[1] = 0;
         angle_sensor_read(sensor_angle);
@@ -164,7 +162,6 @@ int main(void) {
         // Safety to stop operation if angle sensor reading failed TODO: adjust sensivity and add lowpass to angle sensor?
         if ((ABS((hall_angle_offset[0] + ((motPosL / 15 / GEARBOX_RATIO_LEFT) % 360)) - (sensor_angle[0] * ANGLE_TO_DEGREES)) > 5) ||
             (ABS((hall_angle_offset[1] + ((motPosR / 15 / GEARBOX_RATIO_RIGHT) % 360)) - (sensor_angle[1] * ANGLE_TO_DEGREES)) > 5)) {
-          angle_sensor_error += 1;
           //cmdL = cmdR = 0;
         }
         // Safety to stop movement when reaching dead angles, around 20 and 340 degrees
@@ -176,24 +173,27 @@ int main(void) {
         }
       }
 
-      if (hw_type == HW_TYPE_KNEE) {
-        if ((ABS(cmdL) < 20) /*|| angle_sensor_error*/) {
-          rtP_Left.n_cruiseMotTgt   = 0;
-          rtP_Left.b_cruiseCtrlEna  = 1;
-        } else {
-          rtP_Left.b_cruiseCtrlEna  = 0;
-          pwml = -CLAMP((int)cmdL, -TRQ_LIMIT_LEFT, TRQ_LIMIT_LEFT);
-        }
-        if ((ABS(cmdR) < 20) /*|| angle_sensor_error*/) {
-          rtP_Right.n_cruiseMotTgt  = 0;
-          rtP_Right.b_cruiseCtrlEna = 1;
-        } else {
-          rtP_Right.b_cruiseCtrlEna = 0;
-          pwmr = -CLAMP((int)cmdR, -TRQ_LIMIT_RIGHT, TRQ_LIMIT_RIGHT);
-        }
+      if (ABS(cmdL) < 10) {
+        rtP_Left.n_cruiseMotTgt   = 0;
+        rtP_Left.b_cruiseCtrlEna  = 1;
       } else {
-        pwml = CLAMP((int)cmdL, -1000, 1000);
-        pwmr = -CLAMP((int)cmdR, -1000, 1000);
+        rtP_Left.b_cruiseCtrlEna  = 0;
+        if (hw_type == HW_TYPE_KNEE) {
+          pwml = -CLAMP((int)cmdL, -TRQ_LIMIT_LEFT, TRQ_LIMIT_LEFT);
+        } else {
+          pwml = CLAMP((int)cmdL, -1000, 1000);
+        }
+      }
+      if (ABS(cmdR) < 10) {
+        rtP_Right.n_cruiseMotTgt  = 0;
+        rtP_Right.b_cruiseCtrlEna = 1;
+      } else {
+        rtP_Right.b_cruiseCtrlEna = 0;
+        if (hw_type == HW_TYPE_KNEE) {
+          pwmr = -CLAMP((int)cmdR, -TRQ_LIMIT_RIGHT, TRQ_LIMIT_RIGHT);
+        } else {
+          pwmr = -CLAMP((int)cmdR, -1000, 1000);
+        }
       }
 
       // ####### CALC BOARD TEMPERATURE #######
