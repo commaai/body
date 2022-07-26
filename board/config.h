@@ -15,10 +15,12 @@
 #define ADC_TOTAL_CONV_TIME     (ADC_CLOCK_DIV * ADC_CONV_CLOCK_CYCLES) // = ((SystemCoreClock / ADC_CLOCK_HZ) * ADC_CONV_CLOCK_CYCLES), where ADC_CLOCK_HZ = SystemCoreClock/ADC_CLOCK_DIV
 
 #define ANGLE_TO_DEGREES        0.021972656 // Convert 14 bit angle sensor output to degrees
+#define GEARBOX_RATIO_LEFT      19
+#define GEARBOX_RATIO_RIGHT     19
 #define TRQ_LIMIT_LEFT          1000      // Torque limit for knee gearbox(left)
 #define TRQ_LIMIT_RIGHT         1000      // Torque limit for hip gearbox(right)
 
-#define KNEE_ADDR_OFFSET        0x100U
+#define KNEE_ADDR_OFFSET        0x100
 
 #define BAT_FILT_COEF           655       // battery voltage filter coefficient in fixed-point. coef_fixedPoint = coef_floatingPoint * 2^16. In this case 655 = 0.01 * 2^16
 #define BAT_CALIB_REAL_VOLTAGE  3192      // input voltage measured by multimeter (multiplied by 100). In this case 43.00 V * 100 = 4300
