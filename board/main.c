@@ -110,7 +110,7 @@ int main(void) {
     out_enable(POWERSWITCH, false);
     ignition = 1;
   }
-  // Reset LEDs upon startup
+  // Reset LEDs on startup
   out_enable(LED_RED, false);
   out_enable(LED_GREEN, false);
   out_enable(LED_BLUE, false);
@@ -123,12 +123,13 @@ int main(void) {
   int32_t board_temp_adcFixdt = adc_buffer.temp << 16;  // Fixed-point filter output initialized with current ADC converted to fixed-point
   int16_t board_temp_adcFilt  = adc_buffer.temp;
 
-  #define GEARBOX_RATIO_LEFT 19
-  #define GEARBOX_RATIO_RIGHT 19
-
   uint16_t sensor_angle[2] = { 0 };
   uint16_t hall_angle_offset[2] = { 0 };
-  angle_sensor_read(sensor_angle);
+  if (hw_type == HW_TYPE_KNEE) {
+    angle_sensor_read(sensor_angle);
+    hall_angle_offset[0] = (sensor_angle[0] * ANGLE_TO_DEGREES);
+    hall_angle_offset[1] = (sensor_angle[1] * ANGLE_TO_DEGREES);
+  }
 
   while(1) {
     if (buzzerTimer - buzzerTimer_prev > 16*DELAY_IN_MAIN_LOOP) {   // 1 ms = 16 ticks buzzerTimer
@@ -140,19 +141,13 @@ int main(void) {
       }
 
       if (!enable_motors || (torque_cmd_timeout > 20)) {
-        cmdL = 0;
-        cmdR = 0;
+        cmdL = cmdR = 0;
       }
 
       if (ignition == 1 && enable_motors == 0 && (!rtY_Left.z_errCode && !rtY_Right.z_errCode) && (ABS(cmdL) < 50 && ABS(cmdR) < 50)) {
         beepShort(6); // make 2 beeps indicating the motor enable
         beepShort(4);
         HAL_Delay(100);
-        sensor_angle[0] = 0;
-        sensor_angle[1] = 0;
-        angle_sensor_read(sensor_angle);
-        hall_angle_offset[0] = (sensor_angle[0] * ANGLE_TO_DEGREES);
-        hall_angle_offset[1] = (sensor_angle[1] * ANGLE_TO_DEGREES);
         cmdL = cmdR = 0;
         enable_motors = 1; // enable motors
       }
@@ -215,9 +210,11 @@ int main(void) {
           dat[1] = speedL & 0xFFU;
           dat[2] = (speedR >> 8U) & 0xFFU;
           dat[3] = speedR & 0xFFU;
-          dat[4] = pkt_idx;
-          dat[5] = crc_checksum(dat, 5, crc_poly);
-          can_send_msg((0x201U + board.can_addr_offset), ((dat[5]<< 8U) | dat[4]), ((dat[3] << 24U) | (dat[2] << 16U) | (dat[1] << 8U) | dat[0]), 6U);
+          dat[4] = 0;
+          dat[5] = 0;
+          dat[6] = pkt_idx;
+          dat[7] = crc_checksum(dat, 7, crc_poly);
+          can_send_msg((0x201U + board.can_addr_offset), ((dat[7] << 24U) | (dat[6] << 16U) | (dat[5]<< 8U) | dat[4]), ((dat[3] << 24U) | (dat[2] << 16U) | (dat[1] << 8U) | dat[0]), 8U);
           ++pkt_idx;
           pkt_idx &= 0xFU;
 
