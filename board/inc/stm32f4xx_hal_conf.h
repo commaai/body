@@ -51,7 +51,7 @@
 /* #define HAL_SDRAM_MODULE_ENABLED */
 /* #define HAL_HASH_MODULE_ENABLED   */
 #define HAL_GPIO_MODULE_ENABLED
-/* #define HAL_I2C_MODULE_ENABLED    */
+#define HAL_I2C_MODULE_ENABLED
 /* #define HAL_I2S_MODULE_ENABLED    */
 /* #define HAL_IWDG_MODULE_ENABLED  */
 /* #define HAL_LTDC_MODULE_ENABLED  */
@@ -62,7 +62,7 @@
 /* #define HAL_RTC_MODULE_ENABLED */
 /* #define HAL_SAI_MODULE_ENABLED    */
 /* #define HAL_SD_MODULE_ENABLED   */
-/* #define HAL_SPI_MODULE_ENABLED    */
+/* #define HAL_SPI_MODULE_ENABLED */
 #define HAL_TIM_MODULE_ENABLED
 #define HAL_UART_MODULE_ENABLED
 /* #define HAL_USART_MODULE_ENABLED  */
@@ -259,12 +259,12 @@
 
 /* Includes ------------------------------------------------------------------*/
 /**
-  * @brief Include module's header file 
+  * @brief Include module's header file
   */
 
 #ifdef HAL_RCC_MODULE_ENABLED
   #include "stm32f4xx_hal_rcc.h"
-  #include "stm32f4xx_hal_rcc_ex.h"  
+  #include "stm32f4xx_hal_rcc_ex.h"
 #endif /* HAL_RCC_MODULE_ENABLED */
 
 #ifdef HAL_GPIO_MODULE_ENABLED
@@ -298,8 +298,8 @@
 #endif /* HAL_CRC_MODULE_ENABLED */
 
 #ifdef HAL_CRYP_MODULE_ENABLED
-  #include "stm32f4xx_hal_cryp.h" 
-  #include "stm32f4xx_hal_cryp_ex.h"  
+  #include "stm32f4xx_hal_cryp.h"
+  #include "stm32f4xx_hal_cryp_ex.h"
 #endif /* HAL_CRYP_MODULE_ENABLED */
 
 #ifdef HAL_DAC_MODULE_ENABLED
@@ -333,11 +333,11 @@
 
 #ifdef HAL_PCCARD_MODULE_ENABLED
   #include "stm32f4xx_hal_pccard.h"
-#endif /* HAL_PCCARD_MODULE_ENABLED */ 
-  
+#endif /* HAL_PCCARD_MODULE_ENABLED */
+
 #ifdef HAL_SDRAM_MODULE_ENABLED
   #include "stm32f4xx_hal_sdram.h"
-#endif /* HAL_SDRAM_MODULE_ENABLED */      
+#endif /* HAL_SDRAM_MODULE_ENABLED */
 
 #ifdef HAL_HASH_MODULE_ENABLED
  #include "stm32f4xx_hal_hash.h"
@@ -417,7 +417,7 @@
 #ifdef HAL_HCD_MODULE_ENABLED
  #include "stm32f4xx_hal_hcd.h"
 #endif /* HAL_HCD_MODULE_ENABLED */
-   
+
 #ifdef HAL_QSPI_MODULE_ENABLED
  #include "stm32f4xx_hal_qspi.h"
 #endif /* HAL_QSPI_MODULE_ENABLED */

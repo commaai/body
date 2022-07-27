@@ -5,22 +5,6 @@
 #include "stm32f4xx_hal.h"
 #include "config.h"
 
-#define LEFT_HALL_U_PIN GPIO_PIN_13
-#define LEFT_HALL_V_PIN GPIO_PIN_14
-#define LEFT_HALL_W_PIN GPIO_PIN_15
-
-#define LEFT_HALL_U_PORT GPIOC
-#define LEFT_HALL_V_PORT GPIOC
-#define LEFT_HALL_W_PORT GPIOC
-
-#define RIGHT_HALL_U_PIN GPIO_PIN_10
-#define RIGHT_HALL_V_PIN GPIO_PIN_11
-#define RIGHT_HALL_W_PIN GPIO_PIN_12
-
-#define RIGHT_HALL_U_PORT GPIOC
-#define RIGHT_HALL_V_PORT GPIOC
-#define RIGHT_HALL_W_PORT GPIOC
-
 #define LEFT_TIM TIM8
 #define LEFT_TIM_U CCR1
 #define LEFT_TIM_UH_PIN GPIO_PIN_6
@@ -71,26 +55,8 @@
 #define RIGHT_U_CUR_PORT GPIOA
 #define RIGHT_V_CUR_PORT GPIOA
 
-#define DCLINK_PIN GPIO_PIN_4
-#define DCLINK_PORT GPIOA
-
-// RED
-#define LED_RED_PIN GPIO_PIN_2
-#define LED_RED_PORT GPIOD
-
-// GREEN
-#define LED_GREEN_PIN GPIO_PIN_15
-#define LED_GREEN_PORT GPIOA
-
-// BLUE
-#define LED_BLUE_PIN GPIO_PIN_1
-#define LED_BLUE_PORT GPIOC
-
-#define CAN_STBY_PIN GPIO_PIN_7
-#define CAN_STBY_PORT GPIOB
-
-#define IGNITION_PIN GPIO_PIN_9
-#define IGNITION_PORT GPIOB
+#define BATT_PIN GPIO_PIN_4
+#define BATT_PORT GPIOA
 
 #define BUZZER_PIN GPIO_PIN_2
 #define BUZZER_PORT GPIOC
@@ -103,6 +69,12 @@
 
 #define CHARGER_PIN GPIO_PIN_12
 #define CHARGER_PORT GPIOA
+
+// UID pins
+#define KEY1_PIN GPIO_PIN_10
+#define KEY1_PORT GPIOB
+#define KEY2_PIN GPIO_PIN_9
+#define KEY2_PORT GPIOC
 
 #define DELAY_TIM_FREQUENCY_US 1000000
 
@@ -149,6 +121,9 @@
 #define POWERSWITCH 4
 #define TRANSCEIVER 5
 
+#define HW_TYPE_BASE 0
+#define HW_TYPE_KNEE 3
+
 typedef struct {
   uint32_t rrB;
   uint32_t rrC;
@@ -159,5 +134,44 @@ typedef struct {
   uint32_t batt1;
   uint32_t temp;
 } adc_buf_t;
+
+typedef struct {
+  GPIO_TypeDef* hall_portA;
+  uint16_t hall_pinA;
+  GPIO_TypeDef* hall_portB;
+  uint16_t hall_pinB;
+  GPIO_TypeDef* hall_portC;
+  uint16_t hall_pinC;
+} hall_sensor;
+
+typedef struct {
+  hall_sensor hall_left;
+  hall_sensor hall_right;
+
+  CAN_TypeDef* CAN;
+  uint8_t can_alt_tx;
+  uint8_t can_alt_rx;
+  GPIO_TypeDef* can_portTX;
+  uint16_t can_pinTX;
+  GPIO_TypeDef* can_portRX;
+  uint16_t can_pinRX;
+  GPIO_TypeDef* can_portEN;
+  uint16_t can_pinEN;
+
+  GPIO_TypeDef* ignition_port;
+  uint16_t ignition_pin;
+
+  uint32_t can_addr_offset;
+
+  GPIO_TypeDef* led_portR;
+  uint16_t led_pinR;
+  GPIO_TypeDef* led_portG;
+  uint16_t led_pinG;
+  GPIO_TypeDef* led_portB;
+  uint16_t led_pinB;
+
+} board_t;
+
+uint8_t hw_type;                 // type of the board detected(0 - base, 3 - knee)
 
 #endif // DEFINES_H

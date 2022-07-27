@@ -14,8 +14,12 @@
 #include "drivers/llbxcan.h"
 #include "uds.h"
 
-extern int16_t cmdL;                    // global variable for Left Command
-extern int16_t cmdR;                    // global variable for Right Command
+extern P rtP_Left;
+extern P rtP_Right;
+extern volatile int16_t cmdL;                    // global variable for Left Command
+extern volatile int16_t cmdR;                    // global variable for Right Command
+extern uint8_t hw_type;
+extern board_t board;
 
 extern uint32_t enter_bootloader_mode;
 extern volatile uint32_t torque_cmd_timeout;
@@ -81,37 +85,28 @@ void can_send_msg(uint32_t addr, uint32_t dhr, uint32_t dlr, uint8_t len) {
 
 void process_can(void) {
   CAN_FIFOMailBox_TypeDef to_send;
-  if (CAN2->TSR & CAN_TSR_TME0) {
+  if (board.CAN->TSR & CAN_TSR_TME0) {
     if (can_pop(&can_tx_q, &to_send)) {
-      CAN2->sTxMailBox[0].TDLR = to_send.RDLR;
-      CAN2->sTxMailBox[0].TDHR = to_send.RDHR;
-      CAN2->sTxMailBox[0].TDTR = to_send.RDTR;
-      CAN2->sTxMailBox[0].TIR = to_send.RIR;
+      board.CAN->sTxMailBox[0].TDLR = to_send.RDLR;
+      board.CAN->sTxMailBox[0].TDHR = to_send.RDHR;
+      board.CAN->sTxMailBox[0].TDTR = to_send.RDTR;
+      board.CAN->sTxMailBox[0].TIR = to_send.RIR;
     }
   }
 }
 
-void CAN2_TX_IRQHandler(void) {
-  // clear interrupt
-  CAN2->TSR |= CAN_TSR_RQCP0;
-  process_can();
-}
-
-void CAN2_SCE_IRQHandler(void) {
-  llcan_clear_send(CAN2);
-}
-
-void CAN2_RX0_IRQHandler(void) {
-  while ((CAN2->RF0R & CAN_RF0R_FMP0) != 0) {
-    int address = CAN2->sFIFOMailBox[0].RIR >> 21;
-    if (address == 0x250U) {
-      if ((GET_MAILBOX_BYTES_04(&CAN2->sFIFOMailBox[0]) == 0xdeadface) && (GET_MAILBOX_BYTES_48(&CAN2->sFIFOMailBox[0]) == 0x0ab00b1e)) {
+void can_rx(void) {
+  while ((board.CAN->RF0R & CAN_RF0R_FMP0) != 0) {
+    int address = board.CAN->sFIFOMailBox[0].RIR >> 21;
+    if (address == (int32_t)(0x250U + board.can_addr_offset)) {
+      if ((GET_MAILBOX_BYTES_04(&board.CAN->sFIFOMailBox[0]) == 0xdeadface) && (GET_MAILBOX_BYTES_48(&board.CAN->sFIFOMailBox[0]) == 0x0ab00b1e)) {
         enter_bootloader_mode = ENTER_SOFTLOADER_MAGIC;
         NVIC_SystemReset();
       }
-      uint8_t dat[8];
-      for (int i=0; i<8; i++) {
-        dat[i] = GET_MAILBOX_BYTE(&CAN2->sFIFOMailBox[0], i);
+      #define MSG_TRQ_LEN 6
+      uint8_t dat[MSG_TRQ_LEN];
+      for (int i=0; i<MSG_TRQ_LEN; i++) {
+        dat[i] = GET_MAILBOX_BYTE(&board.CAN->sFIFOMailBox[0], i);
       }
       uint16_t valueL = ((dat[0] << 8U) | dat[1]);
       uint16_t valueR = ((dat[2] << 8U) | dat[3]);
@@ -125,13 +120,62 @@ void CAN2_RX0_IRQHandler(void) {
         }
         current_idx = idx;
       }
-    } else if ((address == BROADCAST_ADDR) || (address == FALLBACK_ADDR) || (address == ECU_ADDR) || (address == DEBUG_ADDR)) { // Process UBS and OBD2 requests
-      process_uds(address, GET_MAILBOX_BYTES_04(&CAN2->sFIFOMailBox[0]));
+      out_enable(LED_BLUE, true);
+    } else if (address == (int32_t)(0x251U + board.can_addr_offset)) {
+      #define MSG_SPD_LEN 5
+      uint8_t dat[MSG_TRQ_LEN];
+      for (int i=0; i<MSG_TRQ_LEN; i++) {
+        dat[i] = GET_MAILBOX_BYTE(&board.CAN->sFIFOMailBox[0], i);
+      }
+      uint16_t valueL = ((dat[0] << 8U) | dat[1]);
+      uint16_t valueR = ((dat[2] << 8U) | dat[3]);
+
+      if (crc_checksum(dat, 4, crc_poly) == dat[4]) {
+        if ((valueL == 0) || (valueR == 0)) {
+          rtP_Left.n_max = rtP_Right.n_max = N_MOT_MAX << 4;
+        } else {
+          rtP_Left.n_max = valueL << 4;
+          rtP_Right.n_max = valueR << 4;
+        }
+      }
+      out_enable(LED_BLUE, true);
+    } else if ((hw_type == HW_TYPE_BASE) && ((address == BROADCAST_ADDR) || (address == FALLBACK_ADDR) || (address == ECU_ADDR) || (address == DEBUG_ADDR))) { // Process UBS and OBD2 requests, ignore for knee
+      process_uds(address, GET_MAILBOX_BYTES_04(&board.CAN->sFIFOMailBox[0]));
+      out_enable(LED_BLUE, true);
+    } else if ((hw_type == HW_TYPE_BASE) && (address == 0x203U + KNEE_ADDR_OFFSET)) { // detect knee by body and set flag for use with UDS message
+      knee_detected = 1;
     }
-    out_enable(LED_BLUE, true);
     // next
-    CAN2->RF0R |= CAN_RF0R_RFOM0;
+    board.CAN->RF0R |= CAN_RF0R_RFOM0;
   }
+}
+
+void CAN1_TX_IRQHandler(void) {
+  // clear interrupt
+  board.CAN->TSR |= CAN_TSR_RQCP0;
+  process_can();
+}
+
+void CAN1_SCE_IRQHandler(void) {
+  llcan_clear_send(board.CAN);
+}
+
+void CAN1_RX0_IRQHandler(void) {
+  can_rx();
+}
+
+void CAN2_TX_IRQHandler(void) {
+  // clear interrupt
+  board.CAN->TSR |= CAN_TSR_RQCP0;
+  process_can();
+}
+
+void CAN2_SCE_IRQHandler(void) {
+  llcan_clear_send(board.CAN);
+}
+
+void CAN2_RX0_IRQHandler(void) {
+  can_rx();
 }
 
 #endif

@@ -7,40 +7,48 @@
 TIM_HandleTypeDef htim_right;
 TIM_HandleTypeDef htim_left;
 ADC_HandleTypeDef hadc;
+I2C_HandleTypeDef hi2c1;
+// SPI_HandleTypeDef hspi3;
 
 volatile adc_buf_t adc_buffer;
+extern board_t board;
 
 
-void MX_GPIO_Init(void) {
-  GPIO_InitTypeDef GPIO_InitStruct;
-
+void MX_GPIO_Clocks_Init(void) {
   /* GPIO Ports Clock Enable */
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
   __HAL_RCC_GPIOC_CLK_ENABLE();
   __HAL_RCC_GPIOD_CLK_ENABLE();
 
+  __HAL_RCC_CAN1_CLK_ENABLE();
+  __HAL_RCC_CAN2_CLK_ENABLE();
+}
+
+void MX_GPIO_Common_Init(void) {
+  GPIO_InitTypeDef GPIO_InitStruct;
+
   GPIO_InitStruct.Mode  = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull  = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
 
-  GPIO_InitStruct.Pin = LEFT_HALL_U_PIN;
-  HAL_GPIO_Init(LEFT_HALL_U_PORT, &GPIO_InitStruct);
+  GPIO_InitStruct.Pin = board.hall_left.hall_pinA;
+  HAL_GPIO_Init(board.hall_left.hall_portA, &GPIO_InitStruct);
 
-  GPIO_InitStruct.Pin = LEFT_HALL_V_PIN;
-  HAL_GPIO_Init(LEFT_HALL_V_PORT, &GPIO_InitStruct);
+  GPIO_InitStruct.Pin = board.hall_left.hall_pinB;
+  HAL_GPIO_Init(board.hall_left.hall_portB, &GPIO_InitStruct);
 
-  GPIO_InitStruct.Pin = LEFT_HALL_W_PIN;
-  HAL_GPIO_Init(LEFT_HALL_W_PORT, &GPIO_InitStruct);
+  GPIO_InitStruct.Pin = board.hall_left.hall_pinC;
+  HAL_GPIO_Init(board.hall_left.hall_portC, &GPIO_InitStruct);
 
-  GPIO_InitStruct.Pin = RIGHT_HALL_U_PIN;
-  HAL_GPIO_Init(RIGHT_HALL_U_PORT, &GPIO_InitStruct);
+  GPIO_InitStruct.Pin = board.hall_right.hall_pinA;
+  HAL_GPIO_Init(board.hall_right.hall_portA, &GPIO_InitStruct);
 
-  GPIO_InitStruct.Pin = RIGHT_HALL_V_PIN;
-  HAL_GPIO_Init(RIGHT_HALL_V_PORT, &GPIO_InitStruct);
+  GPIO_InitStruct.Pin = board.hall_right.hall_pinB;
+  HAL_GPIO_Init(board.hall_right.hall_portB, &GPIO_InitStruct);
 
-  GPIO_InitStruct.Pin = RIGHT_HALL_W_PIN;
-  HAL_GPIO_Init(RIGHT_HALL_W_PORT, &GPIO_InitStruct);
+  GPIO_InitStruct.Pin = board.hall_right.hall_pinC;
+  HAL_GPIO_Init(board.hall_right.hall_portC, &GPIO_InitStruct);
 
   GPIO_InitStruct.Pull = GPIO_PULLUP;
   GPIO_InitStruct.Pin = CHARGER_PIN;
@@ -54,20 +62,25 @@ void MX_GPIO_Init(void) {
 
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
 
-  GPIO_InitStruct.Pin = LED_RED_PIN;
-  HAL_GPIO_Init(LED_RED_PORT, &GPIO_InitStruct);
+  GPIO_InitStruct.Pin = board.led_pinR;
+  HAL_GPIO_Init(board.led_portR, &GPIO_InitStruct);
 
-  GPIO_InitStruct.Pin = LED_GREEN_PIN;
-  HAL_GPIO_Init(LED_GREEN_PORT, &GPIO_InitStruct);
+  GPIO_InitStruct.Pin = board.led_pinG;
+  HAL_GPIO_Init(board.led_portG, &GPIO_InitStruct);
 
-  GPIO_InitStruct.Pin = LED_BLUE_PIN;
-  HAL_GPIO_Init(LED_BLUE_PORT, &GPIO_InitStruct);
+  GPIO_InitStruct.Pin = board.led_pinB;
+  HAL_GPIO_Init(board.led_portB, &GPIO_InitStruct);
 
-  GPIO_InitStruct.Pin = CAN_STBY_PIN;
-  HAL_GPIO_Init(CAN_STBY_PORT, &GPIO_InitStruct);
+  if (board.can_pinEN != 0) {
+    GPIO_InitStruct.Pin = board.can_pinEN;
+    HAL_GPIO_Init(board.can_portEN, &GPIO_InitStruct);
+  }
 
-  GPIO_InitStruct.Pin = IGNITION_PIN;
-  HAL_GPIO_Init(IGNITION_PORT, &GPIO_InitStruct);
+  if (board.ignition_pin != 0) {
+    GPIO_InitStruct.Pin = board.ignition_pin;
+    HAL_GPIO_Init(board.ignition_port, &GPIO_InitStruct);
+
+  }
 
   GPIO_InitStruct.Pin = BUZZER_PIN;
   HAL_GPIO_Init(BUZZER_PORT, &GPIO_InitStruct);
@@ -96,8 +109,8 @@ void MX_GPIO_Init(void) {
   GPIO_InitStruct.Pin = RIGHT_V_CUR_PIN;
   HAL_GPIO_Init(RIGHT_V_CUR_PORT, &GPIO_InitStruct);
 
-  GPIO_InitStruct.Pin = DCLINK_PIN;
-  HAL_GPIO_Init(DCLINK_PORT, &GPIO_InitStruct);
+  GPIO_InitStruct.Pin = BATT_PIN;
+  HAL_GPIO_Init(BATT_PORT, &GPIO_InitStruct);
 
   GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
   GPIO_InitStruct.Alternate = GPIO_AF3_TIM8;
@@ -140,16 +153,43 @@ void MX_GPIO_Init(void) {
   GPIO_InitStruct.Pin = RIGHT_TIM_WL_PIN;
   HAL_GPIO_Init(RIGHT_TIM_WL_PORT, &GPIO_InitStruct);
 
-  // Pins for CAN2
+  // CAN bus
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
-  GPIO_InitStruct.Alternate = GPIO_AF9_CAN2;
 
-  GPIO_InitStruct.Pin = GPIO_PIN_5;
-  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+  GPIO_InitStruct.Alternate = board.can_alt_rx;
+  GPIO_InitStruct.Pin = board.can_pinRX;
+  HAL_GPIO_Init(board.can_portRX, &GPIO_InitStruct);
 
-  GPIO_InitStruct.Pin = GPIO_PIN_6;
-  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+  GPIO_InitStruct.Alternate = board.can_alt_tx;
+  GPIO_InitStruct.Pin = board.can_pinTX;
+  HAL_GPIO_Init(board.can_portTX, &GPIO_InitStruct);
 }
+
+
+void MX_I2C_Init(void) {
+  GPIO_InitTypeDef GPIO_InitStruct;
+
+  GPIO_InitStruct.Pin = GPIO_PIN_6|GPIO_PIN_7;
+  GPIO_InitStruct.Mode = GPIO_MODE_AF_OD;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+  GPIO_InitStruct.Alternate = GPIO_AF4_I2C1;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+  __HAL_RCC_I2C1_CLK_ENABLE();
+
+  hi2c1.Instance = I2C1;
+  hi2c1.Init.ClockSpeed = 400000;
+  hi2c1.Init.DutyCycle = I2C_DUTYCYCLE_2;
+  hi2c1.Init.OwnAddress1 = 0;
+  hi2c1.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
+  hi2c1.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
+  hi2c1.Init.OwnAddress2 = 0;
+  hi2c1.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
+  hi2c1.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
+  HAL_I2C_Init(&hi2c1);
+}
+
 
 void MX_TIM_Init(void) {
   __HAL_RCC_TIM1_CLK_ENABLE();
@@ -163,7 +203,7 @@ void MX_TIM_Init(void) {
   htim_right.Instance               = RIGHT_TIM;
   htim_right.Init.Prescaler         = 0;
   htim_right.Init.CounterMode       = TIM_COUNTERMODE_CENTERALIGNED1;
-  htim_right.Init.Period            = SystemCoreClock / 2 / PWM_FREQ; // Was 64000000 before SystemCoreClock
+  htim_right.Init.Period            = CORE_FREQ / 2 / PWM_FREQ;
   htim_right.Init.ClockDivision     = TIM_CLOCKDIVISION_DIV1;
   htim_right.Init.RepetitionCounter = 0;
   htim_right.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
@@ -196,7 +236,7 @@ void MX_TIM_Init(void) {
   htim_left.Instance               = LEFT_TIM;
   htim_left.Init.Prescaler         = 0;
   htim_left.Init.CounterMode       = TIM_COUNTERMODE_CENTERALIGNED1;
-  htim_left.Init.Period            = SystemCoreClock / 2 / PWM_FREQ; // Was 64000000 before SystemCoreClock
+  htim_left.Init.Period            = CORE_FREQ / 2 / PWM_FREQ;
   htim_left.Init.ClockDivision     = TIM_CLOCKDIVISION_DIV1;
   htim_left.Init.RepetitionCounter = 0;
   htim_left.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
@@ -273,16 +313,8 @@ void MX_ADC_Init(void) {
   hadc.Init.DataAlign             = ADC_DATAALIGN_RIGHT;
   hadc.Init.NbrOfConversion       = 8;
   HAL_ADC_Init(&hadc);
-  /**Enable or disable the remapping of ADC1_ETRGREG:
-    * ADC1 External Event regular conversion is connected to TIM8 TRG0
-    */
-  //__HAL_AFIO_REMAP_ADC1_ETRGREG_ENABLE();
 
-  /**Configure the ADC multi-mode
-    */
-  //multimode.Mode = ADC_DUALMODE_REGSIMULT;
   HAL_ADCEx_MultiModeConfigChannel(&hadc, &multimode);
-
   sConfig.SamplingTime = ADC_SAMPLETIME_15CYCLES;
 
   sConfig.Channel = ADC_CHANNEL_5;  // pa5 left b   -> right
@@ -313,7 +345,6 @@ void MX_ADC_Init(void) {
   sConfig.Rank    = 7;
   HAL_ADC_ConfigChannel(&hadc, &sConfig);
 
-  //temperature requires at least 17.1uS sampling time
   sConfig.SamplingTime = ADC_SAMPLETIME_144CYCLES;
   sConfig.Channel = ADC_CHANNEL_TEMPSENSOR;  // internal temp
   sConfig.Rank    = 8;
@@ -340,4 +371,3 @@ void MX_ADC_Init(void) {
 
 
 #endif
-

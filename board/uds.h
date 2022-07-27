@@ -2,6 +2,7 @@ void can_send_msg(uint32_t addr, uint32_t dhr, uint32_t dlr, uint8_t len);
 
 uint8_t uid[10];
 uint32_t uds_request = 0;
+uint8_t knee_detected = 0;
 
 void process_uds(uint32_t addr, uint32_t dlr) {
   memcpy(uid, (void *)0x1FFF7A10U, 0xAU);
@@ -55,7 +56,7 @@ void process_uds(uint32_t addr, uint32_t dlr) {
         break;
       // SYSTEM NAME OR ENGINE TYPE : F197
       case 0x97F12203U:
-        can_send_msg(ECU_R_ADDR, 0x454C4597U, 0xF1620B10U, 8U);
+        can_send_msg(ECU_R_ADDR, 0x454C4597U, 0xF1620C10U, 8U);
         uds_request = 0xF197U;
         break;
       // FLOW CONTROL MESSAGE
@@ -79,7 +80,7 @@ void process_uds(uint32_t addr, uint32_t dlr) {
             break;
           // SYSTEM NAME OR ENGINE TYPE : F197
           case 0xF197U:
-            can_send_msg(ECU_R_ADDR, 0x4349U, 0x52544321U, 8U);
+            can_send_msg(ECU_R_ADDR, (((knee_detected + 0x30) << 16U) | 0x4349U), 0x52544321U, 8U);
             uds_request = 0;
             break;
         }

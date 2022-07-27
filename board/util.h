@@ -21,6 +21,10 @@ void calcAvgSpeed(void);
 void poweroff(void);
 void poweroffPressCheck(void);
 
+// GPIO functions
+uint8_t detect_with_pull(GPIO_TypeDef* GPIOx, uint16_t GPIO_Pin, uint32_t mode);
+uint8_t board_id(void);
+
 // Filtering Functions
 void filtLowPass32(int32_t u, uint16_t coef, int32_t *y);
 void rateLimiter16(int16_t u, int16_t rate, int16_t *y);

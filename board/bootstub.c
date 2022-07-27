@@ -25,6 +25,7 @@
 #include "drivers/llflash.h"
 #include "provision.h"
 #include "util.h"
+#include "boards.h"
 
 #include "flasher.h"
 
@@ -51,19 +52,23 @@ int main(void) {
   HAL_NVIC_SetPriority(SysTick_IRQn, 0, 0);
 
   SystemClock_Config();
-  MX_GPIO_Init();
+  MX_GPIO_Clocks_Init();
+
+  board_detect();
+  MX_GPIO_Common_Init();
 
   out_enable(POWERSWITCH, true);
   out_enable(LED_RED, false);
   out_enable(LED_GREEN, false);
   out_enable(LED_BLUE, false);
 
-  if(HAL_GPIO_ReadPin(BUTTON_PORT, BUTTON_PIN)) {
+  if(HAL_GPIO_ReadPin(BUTTON_PORT, BUTTON_PIN) && (hw_type == HW_TYPE_BASE)) {
     uint16_t cnt_press = 0;
     while(HAL_GPIO_ReadPin(BUTTON_PORT, BUTTON_PIN)) {
       HAL_Delay(10);
       cnt_press++;
       if (cnt_press == (RECOVERY_MODE_DELAY * 100)) {
+        out_enable(LED_GREEN, true);
         soft_flasher_start();
       }
     }

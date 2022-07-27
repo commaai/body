@@ -17,6 +17,10 @@ extern uint8_t buzzerPattern;           // global variable for the buzzer patter
 extern uint8_t enable_motors;                  // global variable for motor enable
 extern uint8_t ignition;                // global variable for ignition on SBU2 line
 
+extern uint8_t hw_type;
+
+extern board_t board;
+
 //------------------------------------------------------------------------
 // Matlab defines - from auto-code generation
 //---------------
@@ -58,6 +62,7 @@ void BLDC_Init(void) {
   rtP_Left.r_fieldWeakLo        = FIELD_WEAK_LO << 4;                   // fixdt(1,16,4)
 
   rtP_Right                     = rtP_Left;     // Copy the Left motor parameters to the Right motor parameters
+  rtP_Right.n_max               = N_MOT_MAX << 4; // But add separate max RPM limit
   rtP_Right.z_selPhaCurMeasABC  = 1;            // Right motor measured current phases {Blue, Yellow} = {iB, iC} -> do NOT change
 
   /* Pack LEFT motor data into RTM */
@@ -77,25 +82,25 @@ void BLDC_Init(void) {
   BLDC_controller_initialize(rtM_Right);
 }
 
-void out_enable(uint8_t led, bool enabled) {
-  switch(led) {
-    case LED_RED:
-      HAL_GPIO_WritePin(LED_RED_PORT, LED_RED_PIN, !enabled);
-      break;
+void out_enable(uint8_t out, bool enabled) {
+  switch(out) {
     case LED_GREEN:
-      HAL_GPIO_WritePin(LED_GREEN_PORT, LED_GREEN_PIN, !enabled);
+      HAL_GPIO_WritePin(board.led_portG, board.led_pinG, !enabled);
+      break;
+    case LED_RED:
+      HAL_GPIO_WritePin(board.led_portR, board.led_pinR, !enabled);
       break;
     case LED_BLUE:
-      HAL_GPIO_WritePin(LED_BLUE_PORT, LED_BLUE_PIN, !enabled);
+      HAL_GPIO_WritePin(board.led_portB, board.led_pinB, !enabled);
       break;
     case IGNITION:
-      HAL_GPIO_WritePin(IGNITION_PORT, IGNITION_PIN, enabled);
+      HAL_GPIO_WritePin(board.ignition_port, board.ignition_pin, enabled);
       break;
     case POWERSWITCH:
       HAL_GPIO_WritePin(OFF_PORT, OFF_PIN, enabled);
       break;
     case TRANSCEIVER:
-      HAL_GPIO_WritePin(CAN_STBY_PORT, CAN_STBY_PIN, !enabled);
+      HAL_GPIO_WritePin(board.can_portEN, board.can_pinEN, !enabled);
       break;
   }
 }
@@ -163,7 +168,7 @@ void poweroff(void) {
   out_enable(POWERSWITCH, false);
   while(1) {
     // Temporarily, to see that we went to power off but can't switch the latch
-    HAL_GPIO_TogglePin(LED_RED_PORT, LED_RED_PIN);
+    HAL_GPIO_TogglePin(board.led_portR, board.led_pinR);
     HAL_Delay(100);
   }
 }
@@ -182,6 +187,24 @@ void poweroffPressCheck(void) {
       beepShort(5);
     }
   }
+}
+
+#define PULL_EFFECTIVE_DELAY 4096
+uint8_t detect_with_pull(GPIO_TypeDef* GPIOx, uint16_t GPIO_Pin, uint32_t mode) {
+  GPIO_InitTypeDef GPIO_InitStruct;
+  GPIO_InitStruct.Pin = GPIO_Pin;
+  GPIO_InitStruct.Mode  = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull  = mode;
+  HAL_GPIO_Init(GPIOx, &GPIO_InitStruct);
+  for (volatile int i=0; i<PULL_EFFECTIVE_DELAY; i++);
+  bool ret = HAL_GPIO_ReadPin(GPIOx, GPIO_Pin);
+  GPIO_InitStruct.Pull  = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOx, &GPIO_InitStruct);
+  return ret;
+}
+
+uint8_t board_id(void) {
+  return  (((!detect_with_pull(KEY1_PORT, KEY1_PIN, GPIO_PULLUP))) | (!detect_with_pull(KEY2_PORT, KEY2_PIN, GPIO_PULLUP)) << 1U);
 }
 
 uint8_t crc_checksum(uint8_t *dat, int len, const uint8_t poly) {
