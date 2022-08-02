@@ -17,8 +17,8 @@
 #define ANGLE_TO_DEGREES        0.021972656 // Convert 14 bit angle sensor output to degrees
 #define GEARBOX_RATIO_LEFT      19
 #define GEARBOX_RATIO_RIGHT     19
-#define TRQ_LIMIT_LEFT          1000      // Torque limit for knee gearbox(left)
-#define TRQ_LIMIT_RIGHT         1000      // Torque limit for hip gearbox(right)
+#define TRQ_LIMIT_LEFT          400      // Torque limit for knee gearbox(left)
+#define TRQ_LIMIT_RIGHT         200      // Torque limit for hip gearbox(right)
 
 #define KNEE_ADDR_OFFSET        0x100
 
@@ -63,6 +63,7 @@
 #define I_MOT_MAX       15              // [A] Maximum single motor current limit
 #define I_DC_MAX        17              // [A] Maximum stage2 DC Link current limit for Commutation and Sinusoidal types (This is the final current protection. Above this value, current chopping is applied. To avoid this make sure that I_DC_MAX = I_MOT_MAX + 2A)
 #define N_MOT_MAX       100            // [rpm] Maximum motor speed limit // 100 ~= 52m/m
+#define TORQUE_BASE_MAX 1000
 
 // Field Weakening / Phase Advance
 #define FIELD_WEAK_ENA  0               // [-] Field Weakening / Phase Advance enable flag: 0 = Disabled (default), 1 = Enabled
