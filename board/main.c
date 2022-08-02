@@ -157,7 +157,7 @@ int main(void) {
         // Safety to stop operation if angle sensor reading failed TODO: adjust sensivity and add lowpass to angle sensor?
         if ((ABS((hall_angle_offset[0] + ((motPosL / 15 / GEARBOX_RATIO_LEFT) % 360)) - (sensor_angle[0] * ANGLE_TO_DEGREES)) > 5) ||
             (ABS((hall_angle_offset[1] + ((motPosR / 15 / GEARBOX_RATIO_RIGHT) % 360)) - (sensor_angle[1] * ANGLE_TO_DEGREES)) > 5)) {
-          //cmdL = cmdR = 0;
+          cmdL = cmdR = 0;
         }
         // Safety to stop movement when reaching dead angles, around 20 and 340 degrees
         if (((sensor_angle[0] < 900) && (cmdL < 0)) || ((sensor_angle[0] > 15500) && (cmdL > 0))) {
@@ -176,7 +176,7 @@ int main(void) {
         if (hw_type == HW_TYPE_KNEE) {
           pwml = -CLAMP((int)cmdL, -TRQ_LIMIT_LEFT, TRQ_LIMIT_LEFT);
         } else {
-          pwml = CLAMP((int)cmdL, -1000, 1000);
+          pwml = CLAMP((int)cmdL, -TORQUE_BASE_MAX, TORQUE_BASE_MAX);
         }
       }
       if (ABS(cmdR) < 10) {
@@ -187,7 +187,7 @@ int main(void) {
         if (hw_type == HW_TYPE_KNEE) {
           pwmr = -CLAMP((int)cmdR, -TRQ_LIMIT_RIGHT, TRQ_LIMIT_RIGHT);
         } else {
-          pwmr = -CLAMP((int)cmdR, -1000, 1000);
+          pwmr = -CLAMP((int)cmdR, -TORQUE_BASE_MAX, TORQUE_BASE_MAX);
         }
       }
 
