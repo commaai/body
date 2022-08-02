@@ -24,8 +24,6 @@ USB_Setup_TypeDef;
 uint32_t *prog_ptr = NULL;
 bool unlocked = false;
 
-#define CAN CAN2
-
 #define CAN_BL_INPUT 0x1
 #define CAN_BL_OUTPUT 0x2
 
@@ -124,7 +122,7 @@ int prep_data(uint8_t *data, uint8_t *data_out) {
 
 void CAN2_TX_IRQHandler(void) {
   // clear interrupt
-  CAN->TSR |= CAN_TSR_RQCP0;
+  board.CAN->TSR |= CAN_TSR_RQCP0;
 }
 
 #define ISOTP_BUF_SIZE 0x110
@@ -140,21 +138,21 @@ int isotp_buf_out_idx = 0;
 
 void bl_can_send(uint8_t *odat) {
   // wait for send
-  while (!(CAN->TSR & CAN_TSR_TME0));
+  while (!(board.CAN->TSR & CAN_TSR_TME0));
 
   // send continue
-  CAN->sTxMailBox[0].TDLR = ((uint32_t*)odat)[0];
-  CAN->sTxMailBox[0].TDHR = ((uint32_t*)odat)[1];
-  CAN->sTxMailBox[0].TDTR = 8;
-  CAN->sTxMailBox[0].TIR = (CAN_BL_OUTPUT << 21) | 1;
+  board.CAN->sTxMailBox[0].TDLR = ((uint32_t*)odat)[0];
+  board.CAN->sTxMailBox[0].TDHR = ((uint32_t*)odat)[1];
+  board.CAN->sTxMailBox[0].TDTR = 8;
+  board.CAN->sTxMailBox[0].TIR = (CAN_BL_OUTPUT << 21) | 1;
 }
 
 void CAN2_RX0_IRQHandler(void) {
-  while (CAN->RF0R & CAN_RF0R_FMP0) {
-    if ((CAN->sFIFOMailBox[0].RIR>>21) == CAN_BL_INPUT) {
+  while (board.CAN->RF0R & CAN_RF0R_FMP0) {
+    if ((board.CAN->sFIFOMailBox[0].RIR>>21) == CAN_BL_INPUT) {
       uint8_t dat[8];
       for (int i = 0; i < 8; i++) {
-        dat[i] = GET_MAILBOX_BYTE(&CAN->sFIFOMailBox[0], i);
+        dat[i] = GET_MAILBOX_BYTE(&board.CAN->sFIFOMailBox[0], i);
       }
       uint8_t odat[8];
       uint8_t type = dat[0] & 0xF0;
@@ -162,7 +160,7 @@ void CAN2_RX0_IRQHandler(void) {
         // continue
         while (isotp_buf_out_remain > 0) {
           // wait for send
-          while (!(CAN->TSR & CAN_TSR_TME0));
+          while (!(board.CAN->TSR & CAN_TSR_TME0));
 
           odat[0] = 0x20 | isotp_buf_out_idx;
           memcpy(odat+1, isotp_buf_out_ptr, 7);
@@ -218,16 +216,28 @@ void CAN2_RX0_IRQHandler(void) {
       }
     }
     // next
-    CAN->RF0R |= CAN_RF0R_RFOM0;
+    board.CAN->RF0R |= CAN_RF0R_RFOM0;
   }
 }
 
 void CAN2_SCE_IRQHandler(void) {
-  llcan_clear_send(CAN);
+  llcan_clear_send(board.CAN);
+}
+
+void CAN1_TX_IRQHandler(void) {
+  CAN2_TX_IRQHandler();
+}
+
+void CAN1_RX0_IRQHandler(void) {
+  CAN2_RX0_IRQHandler();
+}
+
+void CAN1_SCE_IRQHandler(void) {
+  CAN2_SCE_IRQHandler();
 }
 
 void check_powerdown(void) {
-  if(HAL_GPIO_ReadPin(BUTTON_PORT, BUTTON_PIN)) {
+  if(HAL_GPIO_ReadPin(BUTTON_PORT, BUTTON_PIN) && (hw_type == HW_TYPE_BASE)) {
     uint16_t cnt_press = 0;
     while(HAL_GPIO_ReadPin(BUTTON_PORT, BUTTON_PIN)) {
       HAL_Delay(10);
@@ -236,7 +246,7 @@ void check_powerdown(void) {
         out_enable(POWERSWITCH, false);
         while(1) {
           // Temporarily, to see that we went to power off but can't switch the latch
-          HAL_GPIO_TogglePin(LED_RED_PORT, LED_RED_PIN);
+          HAL_GPIO_TogglePin(board.led_portR, board.led_pinR);
           HAL_Delay(100);
         }
       }
@@ -246,13 +256,6 @@ void check_powerdown(void) {
 
 
 void soft_flasher_start(void) {
-  HAL_NVIC_SetPriority(CAN2_TX_IRQn, 0, 0);
-  HAL_NVIC_EnableIRQ(CAN2_TX_IRQn);
-  HAL_NVIC_SetPriority(CAN2_RX0_IRQn, 0, 0);
-  HAL_NVIC_EnableIRQ(CAN2_RX0_IRQn);
-  HAL_NVIC_SetPriority(CAN2_SCE_IRQn, 0, 0);
-  HAL_NVIC_EnableIRQ(CAN2_SCE_IRQn);
-
   enter_bootloader_mode = 0;
 
   out_enable(TRANSCEIVER, true);
@@ -261,11 +264,15 @@ void soft_flasher_start(void) {
   __HAL_RCC_CAN2_CLK_ENABLE();
 
   // init can
-  llcan_set_speed(CAN, 5000, false, false);
-  llcan_init(CAN);
+  llcan_set_speed(board.CAN, 5000, false, false);
+  llcan_init(board.CAN);
 
-  // green LED on for flashing
   out_enable(LED_BLUE, true);
+  // Wait for power button release, only for the base
+  if (hw_type == HW_TYPE_BASE) {
+    while(HAL_GPIO_ReadPin(BUTTON_PORT, BUTTON_PIN)) {}
+  }
+  out_enable(LED_GREEN, false);
 
   uint64_t cnt = 0;
 

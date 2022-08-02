@@ -4,6 +4,7 @@
 
 #include "stm32f4xx_hal.h"
 
+#define CORE_FREQ           72000000U // MCU frequency in hertz
 #define PWM_FREQ            16000     // PWM frequency in Hz / is also used for buzzer
 #define DEAD_TIME              48     // PWM deadtime
 #define DELAY_IN_MAIN_LOOP      5     // in ms. default 5. it is independent of all the timing critical stuff. do not touch if you do not know what you are doing.
@@ -12,6 +13,14 @@
 #define ADC_CONV_CLOCK_CYCLES   (ADC_SAMPLETIME_15CYCLES)
 #define ADC_CLOCK_DIV           (4)
 #define ADC_TOTAL_CONV_TIME     (ADC_CLOCK_DIV * ADC_CONV_CLOCK_CYCLES) // = ((SystemCoreClock / ADC_CLOCK_HZ) * ADC_CONV_CLOCK_CYCLES), where ADC_CLOCK_HZ = SystemCoreClock/ADC_CLOCK_DIV
+
+#define ANGLE_TO_DEGREES        0.021972656 // Convert 14 bit angle sensor output to degrees
+#define GEARBOX_RATIO_LEFT      19
+#define GEARBOX_RATIO_RIGHT     19
+#define TRQ_LIMIT_LEFT          400      // Torque limit for knee gearbox(left)
+#define TRQ_LIMIT_RIGHT         200      // Torque limit for hip gearbox(right)
+
+#define KNEE_ADDR_OFFSET        0x100
 
 #define BAT_FILT_COEF           655       // battery voltage filter coefficient in fixed-point. coef_fixedPoint = coef_floatingPoint * 2^16. In this case 655 = 0.01 * 2^16
 #define BAT_CALIB_REAL_VOLTAGE  3192      // input voltage measured by multimeter (multiplied by 100). In this case 43.00 V * 100 = 4300
@@ -54,6 +63,7 @@
 #define I_MOT_MAX       15              // [A] Maximum single motor current limit
 #define I_DC_MAX        17              // [A] Maximum stage2 DC Link current limit for Commutation and Sinusoidal types (This is the final current protection. Above this value, current chopping is applied. To avoid this make sure that I_DC_MAX = I_MOT_MAX + 2A)
 #define N_MOT_MAX       100            // [rpm] Maximum motor speed limit // 100 ~= 52m/m
+#define TORQUE_BASE_MAX 1000
 
 // Field Weakening / Phase Advance
 #define FIELD_WEAK_ENA  0               // [-] Field Weakening / Phase Advance enable flag: 0 = Disabled (default), 1 = Enabled
