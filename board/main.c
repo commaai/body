@@ -13,6 +13,7 @@
 #include "comms.h"
 #include "drivers/clock.h"
 #include "early_init.h"
+#include "drivers/i2c_soft.h"
 #include "drivers/angle_sensor.h"
 #include "boards.h"
 
@@ -35,6 +36,7 @@ extern ExtU rtU_Left;                   /* External inputs */
 extern ExtU rtU_Right;                  /* External inputs */
 //---------------
 
+// TODO: remove both, unneeded. Also func in util.c too
 extern int16_t speedAvg;                // Average measured speed
 extern int16_t speedAvgAbs;             // Average measured speed in absolute
 
@@ -54,9 +56,8 @@ extern board_t board;
 // Global variables set here in main.c
 //------------------------------------------------------------------------
 extern volatile uint32_t buzzerTimer;
-volatile uint32_t main_loop_counter;
-volatile uint32_t torque_cmd_timeout;
-volatile uint32_t ignition_off_counter;
+volatile uint32_t torque_cmd_timeout = 0U;
+volatile uint32_t ignition_off_counter = 0U;
 int16_t batVoltageCalib;         // global variable for calibrated battery voltage
 int16_t board_temp_deg_c;        // global variable for calibrated temperature in degrees Celsius
 volatile int16_t cmdL;                    // global variable for Left Command
@@ -72,6 +73,15 @@ uint8_t pkt_idx = 0;             // For CAN msg counter
 // Local variables
 //------------------------------------------------------------------------
 static uint32_t buzzerTimer_prev = 0U;
+
+static uint32_t main_loop_1Hz = 0U;
+static uint32_t main_loop_1Hz_runtime = 0U;
+
+static uint32_t main_loop_10Hz = 0U;
+static uint32_t main_loop_10Hz_runtime = 0U;
+
+static uint32_t main_loop_100Hz = 0U;
+static uint32_t main_loop_100Hz_runtime = 0U;
 
 void __initialize_hardware_early(void) {
   early_initialization();
@@ -119,6 +129,9 @@ int main(void) {
   llcan_set_speed(board.CAN, 5000, false, false);
   llcan_init(board.CAN);
 
+  SW_I2C_init();
+  IMU_soft_init();
+
   poweronMelody();
 
   int32_t board_temp_adcFixdt = adc_buffer.temp << 16;  // Fixed-point filter output initialized with current ADC converted to fixed-point
@@ -126,14 +139,17 @@ int main(void) {
 
   uint16_t sensor_angle[2] = { 0 };
   uint16_t hall_angle_offset[2] = { 0 };
+
+  uint16_t unknown_imu_data[6] = { 0 };
+
   if (hw_type == HW_TYPE_KNEE) {
-    angle_sensor_read(sensor_angle);
+    angle_sensor_read(sensor_angle); // Initial data to set offsets between angle sensor and hall sensor
     hall_angle_offset[0] = (sensor_angle[0] * ANGLE_TO_DEGREES);
     hall_angle_offset[1] = (sensor_angle[1] * ANGLE_TO_DEGREES);
   }
 
   while(1) {
-    if (buzzerTimer - buzzerTimer_prev > 16*DELAY_IN_MAIN_LOOP) {   // 1 ms = 16 ticks buzzerTimer
+    if (buzzerTimer - buzzerTimer_prev > 16*DELAY_IN_MAIN_LOOP) { // 1 ms = 16 ticks buzzerTimer
       calcAvgSpeed();
 
       if (ignition == 0) {
@@ -141,7 +157,7 @@ int main(void) {
         enable_motors = 0;
       }
 
-      if (!enable_motors || (torque_cmd_timeout > 20)) {
+      if (!enable_motors || (torque_cmd_timeout > 10)) {
         cmdL = cmdR = 0;
       }
 
@@ -154,7 +170,6 @@ int main(void) {
       }
 
       if (hw_type == HW_TYPE_KNEE) {
-        angle_sensor_read(sensor_angle);
         // Safety to stop operation if angle sensor reading failed TODO: adjust sensivity and add lowpass to angle sensor?
         if ((ABS((hall_angle_offset[0] + ((motPosL / 15 / GEARBOX_RATIO_LEFT) % 360)) - (sensor_angle[0] * ANGLE_TO_DEGREES)) > 5) ||
             (ABS((hall_angle_offset[1] + ((motPosR / 15 / GEARBOX_RATIO_RIGHT) % 360)) - (sensor_angle[1] * ANGLE_TO_DEGREES)) > 5)) {
@@ -192,16 +207,10 @@ int main(void) {
         }
       }
 
-      // ####### CALC BOARD TEMPERATURE #######
-      filtLowPass32(adc_buffer.temp, TEMP_FILT_COEF, &board_temp_adcFixdt);
-      board_temp_adcFilt  = (int16_t)(board_temp_adcFixdt >> 16);  // convert fixed-point to integer
-      board_temp_deg_c    = (TEMP_CAL_HIGH_DEG_C - TEMP_CAL_LOW_DEG_C) * (board_temp_adcFilt - TEMP_CAL_LOW_ADC) / (TEMP_CAL_HIGH_ADC - TEMP_CAL_LOW_ADC) + TEMP_CAL_LOW_DEG_C;
-
-      // ####### CALC CALIBRATED BATTERY VOLTAGE #######
-      batVoltageCalib = batVoltage * BAT_CALIB_REAL_VOLTAGE / BAT_CALIB_ADC;
-
       // runs at ~100Hz
-      if (main_loop_counter % 2 == 0) {
+      if ((buzzerTimer - (main_loop_100Hz - main_loop_100Hz_runtime)) > 16*10) {
+        main_loop_100Hz_runtime = buzzerTimer;
+        main_loop_100Hz = buzzerTimer;
         if (ignition_off_counter <= 10) {
           // MOTORS_DATA: speed_L(2), speed_R(2), counter(1), checksum(1)
           uint8_t dat[8];
@@ -233,6 +242,7 @@ int main(void) {
           uint16_t left_hall_angle;
           uint16_t right_hall_angle;
           if (hw_type == HW_TYPE_KNEE) {
+            angle_sensor_read(sensor_angle);
             left_hall_angle = hall_angle_offset[0] + ((motPosL / 15 / GEARBOX_RATIO_LEFT) % 360);
             right_hall_angle = hall_angle_offset[1] + ((motPosR / 15 / GEARBOX_RATIO_RIGHT) % 360);
           } else {
@@ -249,11 +259,34 @@ int main(void) {
           dat[6] = (right_hall_angle>>8U) & 0xFFU;
           dat[7] = right_hall_angle & 0xFFU;
           can_send_msg((0x205U + board.can_addr_offset), ((dat[7] << 24U) | (dat[6] << 16U) | (dat[5] << 8U) | dat[4]), ((dat[3] << 24U) | (dat[2] << 16U) | (dat[1] << 8U) | dat[0]), 8U);
+
+          IMU_soft_sensor_read(unknown_imu_data);
+          //BOARD_IMU_RAW1: FIXME: add comment after discovering data, looks like magnetometer
+          dat[0] = (unknown_imu_data[0]>>8U) & 0xFFU;
+          dat[1] = unknown_imu_data[0] & 0xFFU;
+          dat[2] = (unknown_imu_data[1]>>8U) & 0xFFU;
+          dat[3] = unknown_imu_data[1] & 0xFFU;
+          dat[4] = (unknown_imu_data[2]>>8U) & 0xFFU;
+          dat[5] = unknown_imu_data[2] & 0xFFU;
+          can_send_msg((0x206U + board.can_addr_offset), ((dat[5] << 8U) | dat[4]), ((dat[3] << 24U) | (dat[2] << 16U) | (dat[1] << 8U) | dat[0]), 6U);
+
+          //BOARD_IMU_RAW2: FIXME: add comment after discovering data, looks like acceleration?
+          dat[0] = (unknown_imu_data[3]>>8U) & 0xFFU;
+          dat[1] = unknown_imu_data[3] & 0xFFU;
+          dat[2] = (unknown_imu_data[4]>>8U) & 0xFFU;
+          dat[3] = unknown_imu_data[4] & 0xFFU;
+          dat[4] = (unknown_imu_data[5]>>8U) & 0xFFU;
+          dat[5] = unknown_imu_data[5] & 0xFFU;
+          can_send_msg((0x207U + board.can_addr_offset), ((dat[5] << 8U) | dat[4]), ((dat[3] << 24U) | (dat[2] << 16U) | (dat[1] << 8U) | dat[0]), 6U);
         }
+        torque_cmd_timeout = (torque_cmd_timeout < MAX_uint32_T) ? (torque_cmd_timeout+1) : 0;
+        main_loop_100Hz_runtime = buzzerTimer - main_loop_100Hz_runtime;
       }
 
       // runs at ~10Hz
-      if (main_loop_counter % 20 == 0) {
+       if ((buzzerTimer - (main_loop_10Hz - main_loop_10Hz_runtime)) > 16*100) {
+        main_loop_10Hz_runtime = buzzerTimer;
+        main_loop_10Hz = buzzerTimer;
         if (ignition_off_counter <= 10) {
           // VAR_VALUES: fault_status(0:6), enable_motors(0:1), ignition(0:1), left motor error(1), right motor error(1), global fault status(1)
           uint8_t dat[2];
@@ -263,10 +296,21 @@ int main(void) {
           can_send_msg((0x202U + board.can_addr_offset), 0x0U, ((dat[2] << 16U) | (dat[1] << 8U) | dat[0]), 3U);
         }
         out_enable(LED_GREEN, ignition);
+        main_loop_10Hz_runtime = buzzerTimer - main_loop_10Hz_runtime;
       }
 
       // runs at ~1Hz
-      if (main_loop_counter % 200 == 0) {
+      if ((buzzerTimer - (main_loop_1Hz - main_loop_1Hz_runtime)) > 16*1000) {
+        main_loop_1Hz_runtime = buzzerTimer;
+        main_loop_1Hz = buzzerTimer;
+         // ####### CALC BOARD TEMPERATURE #######
+        filtLowPass32(adc_buffer.temp, TEMP_FILT_COEF, &board_temp_adcFixdt);
+        board_temp_adcFilt  = (int16_t)(board_temp_adcFixdt >> 16);  // convert fixed-point to integer
+        board_temp_deg_c    = (TEMP_CAL_HIGH_DEG_C - TEMP_CAL_LOW_DEG_C) * (board_temp_adcFilt - TEMP_CAL_LOW_ADC) / (TEMP_CAL_HIGH_ADC - TEMP_CAL_LOW_ADC) + TEMP_CAL_LOW_DEG_C;
+
+        // ####### CALC CALIBRATED BATTERY VOLTAGE #######
+        batVoltageCalib = batVoltage * BAT_CALIB_REAL_VOLTAGE / BAT_CALIB_ADC;
+
         charger_connected = !HAL_GPIO_ReadPin(CHARGER_PORT, CHARGER_PIN);
         uint8_t battery_percent = 100 - (((420 * BAT_CELLS) - batVoltageCalib) / BAT_CELLS / VOLTS_PER_PERCENT / 100); // Battery % left
 
@@ -286,6 +330,7 @@ int main(void) {
         } else {
           ignition_off_counter = (ignition_off_counter < MAX_uint32_T) ? (ignition_off_counter+1) : 0;
         }
+        main_loop_1Hz_runtime = buzzerTimer - main_loop_1Hz_runtime;
       }
 
       process_can();
@@ -294,26 +339,23 @@ int main(void) {
       }
 
       if ((TEMP_POWEROFF_ENABLE && board_temp_deg_c >= TEMP_POWEROFF && speedAvgAbs < 20) || (batVoltage < BAT_DEAD && speedAvgAbs < 20)) {  // poweroff before mainboard burns OR low bat 3
-        poweroff();
+        // poweroff();
       } else if (rtY_Left.z_errCode || rtY_Right.z_errCode) { // 1 beep (low pitch): Motor error, disable motors
         enable_motors = 0;
-        beepCount(1, 24, 1);
+        // beepCount(1, 24, 1);
       } else if (TEMP_WARNING_ENABLE && board_temp_deg_c >= TEMP_WARNING) { // 5 beeps (low pitch): Mainboard temperature warning
         beepCount(5, 24, 1);
       } else if (batVoltage < BAT_LVL1) { // 1 beep fast (medium pitch): Low bat 1
         beepCount(0, 10, 6);
-        out_enable(LED_RED, true);
+        // out_enable(LED_RED, true);
       } else if (batVoltage < BAT_LVL2) { // 1 beep slow (medium pitch): Low bat 2
         beepCount(0, 10, 30);
       } else {  // do not beep
         beepCount(0, 0, 0);
-        out_enable(LED_RED, false);
+        // out_enable(LED_RED, false);
       }
 
       buzzerTimer_prev = buzzerTimer;
-
-      main_loop_counter = (main_loop_counter < MAX_uint32_T) ? (main_loop_counter+1) : 0;
-      torque_cmd_timeout = (torque_cmd_timeout < MAX_uint32_T) ? (torque_cmd_timeout+1) : 0;
     }
   }
 }
