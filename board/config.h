@@ -4,11 +4,11 @@
 
 #include "stm32f4xx_hal.h"
 
-#define CORE_FREQ           72000000U // MCU frequency in hertz
-#define PWM_FREQ            16000     // PWM frequency in Hz / is also used for buzzer
-#define DEAD_TIME              48     // PWM deadtime
+#define CORE_FREQ               72000000U // MCU frequency in hertz
+#define PWM_FREQ                16000     // PWM frequency in Hz / is also used for buzzer
+#define DEAD_TIME               48     // PWM deadtime
 #define DELAY_IN_MAIN_LOOP      5     // in ms. default 5. it is independent of all the timing critical stuff. do not touch if you do not know what you are doing.
-#define A2BIT_CONV             50     // A to bit for current conversion on ADC. Example: 1 A = 50, 2 A = 100, etc
+#define A2BIT_CONV              50     // A to bit for current conversion on ADC. Example: 1 A = 50, 2 A = 100, etc
 
 #define ADC_CONV_CLOCK_CYCLES   (ADC_SAMPLETIME_15CYCLES)
 #define ADC_CLOCK_DIV           (4)
@@ -26,7 +26,7 @@
 #define BAT_CALIB_REAL_VOLTAGE  3192      // input voltage measured by multimeter (multiplied by 100). In this case 43.00 V * 100 = 4300
 #define BAT_CALIB_ADC           1275      // adc-value measured by mainboard (value nr 5 on UART debug output)
 #define BAT_CELLS               7         // battery number of cells. Normal Hoverboard battery: 10s
-#define VOLTS_PER_PERCENT      0.00814    // Volts per percent, for conversion of volts to percentage
+#define VOLTS_PER_PERCENT       0.00814    // Volts per percent, for conversion of volts to percentage
 #define BAT_LVL2                (358 * BAT_CELLS * BAT_CALIB_ADC) / BAT_CALIB_REAL_VOLTAGE // 24%
 #define BAT_LVL1                (351 * BAT_CELLS * BAT_CALIB_ADC) / BAT_CALIB_REAL_VOLTAGE // 15%
 #define BAT_DEAD                (339 * BAT_CELLS * BAT_CALIB_ADC) / BAT_CALIB_REAL_VOLTAGE // 0%

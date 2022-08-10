@@ -6,6 +6,8 @@
 #include "bldc/BLDC_controller.h"
 #include "bldc/rtwtypes.h"
 
+// TODO: simplify util.c to util.h
+
 //------------------------------------------------------------------------
 // Global variables set externally
 //------------------------------------------------------------------------
@@ -14,7 +16,7 @@ extern uint8_t buzzerCount;             // global variable for the buzzer counts
 extern uint8_t buzzerFreq;              // global variable for the buzzer pitch. can be 1, 2, 3, 4, 5, 6, 7...
 extern uint8_t buzzerPattern;           // global variable for the buzzer pattern. can be 1, 2, 3, 4, 5, 6, 7...
 
-extern uint8_t enable_motors;                  // global variable for motor enable
+extern uint8_t enable_motors;           // global variable for motor enable
 extern uint8_t ignition;                // global variable for ignition on SBU2 line
 
 extern uint8_t hw_type;
