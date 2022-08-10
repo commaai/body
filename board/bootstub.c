@@ -29,6 +29,8 @@
 
 #include "flasher.h"
 
+uint8_t hw_type;                 // type of the board detected(0 - base, 3 - knee)
+
 void __initialize_hardware_early(void) {
   early_initialization();
 }

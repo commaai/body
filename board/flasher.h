@@ -23,6 +23,7 @@ USB_Setup_TypeDef;
 
 uint32_t *prog_ptr = NULL;
 bool unlocked = false;
+extern uint8_t hw_type;
 
 #define CAN_BL_INPUT 0x1
 #define CAN_BL_OUTPUT 0x2

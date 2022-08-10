@@ -62,6 +62,7 @@ int16_t board_temp_deg_c;        // global variable for calibrated temperature i
 volatile int16_t cmdL;                    // global variable for Left Command
 volatile int16_t cmdR;                    // global variable for Right Command
 
+uint8_t hw_type;                 // type of the board detected(0 - base, 3 - knee)
 uint8_t ignition = 0;            // global variable for ignition on SBU2 line
 uint8_t charger_connected = 0;   // status of the charger port
 uint8_t fault_status = 0;        // fault status of the whole system

@@ -172,6 +172,4 @@ typedef struct {
 
 } board_t;
 
-uint8_t hw_type;                 // type of the board detected(0 - base, 3 - knee)
-
 #endif // DEFINES_H

@@ -1,3 +1,4 @@
+extern uint8_t hw_type;
 board_t board;
 
 void board_detect(void) {
