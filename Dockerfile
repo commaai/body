@@ -6,35 +6,17 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y --no-install-recommends \
     autoconf \
     automake \
-    bzip2 \
     ca-certificates \
-    capnproto \
     clang \
     curl \
     g++ \
     gcc-arm-none-eabi libnewlib-arm-none-eabi \
     git \
-    libarchive-dev \
-    libavformat-dev libavcodec-dev libavdevice-dev libavutil-dev libswscale-dev libavresample-dev libavfilter-dev \
-    libbz2-dev \
-    libcapnp-dev \
-    libcurl4-openssl-dev \
-    libffi-dev \
     libtool \
-    libssl-dev \
-    libsqlite3-dev \
-    libusb-1.0-0 \
-    libzmq3-dev \
     locales \
-    opencl-headers \
-    ocl-icd-opencl-dev \
     make \
     patch \
     pkg-config \
-    python \
-    python-dev \
-    unzip \
-    wget \
     zlib1g-dev \
  && rm -rf /var/lib/apt/lists/*
 
