@@ -13,6 +13,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc-arm-none-eabi libnewlib-arm-none-eabi \
     git \
     libtool \
+    libssl-dev \
     locales \
     make \
     patch \

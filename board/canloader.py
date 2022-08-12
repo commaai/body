@@ -2,8 +2,8 @@
 import time
 import argparse
 import _thread
-from panda import Panda, MCU_TYPE_F4
-from panda.tests.pedal.canhandle import CanHandle
+from panda import Panda, MCU_TYPE_F4  # pylint: disable=import-error
+from panda.tests.pedal.canhandle import CanHandle  # pylint: disable=import-error
 
 
 def heartbeat_thread(p):
