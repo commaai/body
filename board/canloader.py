@@ -2,7 +2,7 @@
 import time
 import argparse
 import _thread
-from panda import Panda
+from panda import Panda, MCU_TYPE_F4
 from panda.tests.pedal.canhandle import CanHandle
 
 
@@ -22,7 +22,7 @@ def flasher(p, addr, file):
   retries = 3 # How many times to retry on timeout error
   while(retries+1>0):
     try:
-      Panda.flash_static(CanHandle(p, 0), code)
+      Panda.flash_static(CanHandle(p, 0), code, MCU_TYPE_F4)
     except TimeoutError:
       print("Timeout, trying again...")
       retries -= 1

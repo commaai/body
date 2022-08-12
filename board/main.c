@@ -72,7 +72,7 @@ uint8_t pkt_idx = 0;             // For CAN msg counter
 //------------------------------------------------------------------------
 // Local variables
 //------------------------------------------------------------------------
-static uint32_t buzzerTimer_prev = 0U;
+static uint32_t tick_prev = 0U;
 
 static uint32_t main_loop_1Hz = 0U;
 static uint32_t main_loop_1Hz_runtime = 0U;
@@ -149,68 +149,68 @@ int main(void) {
   }
 
   while(1) {
-    if (buzzerTimer - buzzerTimer_prev > 16*DELAY_IN_MAIN_LOOP) { // 1 ms = 16 ticks buzzerTimer
-      calcAvgSpeed();
+    if ((HAL_GetTick() - tick_prev) >= 1) { // 1kHz loop
+      // runs at 100Hz
+      if ((HAL_GetTick() - (main_loop_100Hz - main_loop_100Hz_runtime)) >= 10) {
+        main_loop_100Hz_runtime = HAL_GetTick();
 
-      if (ignition == 0) {
-        cmdL = cmdR = 0;
-        enable_motors = 0;
-      }
+        calcAvgSpeed();
 
-      if (!enable_motors || (torque_cmd_timeout > 10)) {
-        cmdL = cmdR = 0;
-      }
+        if (ignition == 0) {
+          cmdL = cmdR = 0;
+          enable_motors = 0;
+        }
 
-      if (ignition == 1 && enable_motors == 0 && (!rtY_Left.z_errCode && !rtY_Right.z_errCode) && (ABS(cmdL) < 50 && ABS(cmdR) < 50)) {
-        beepShort(6); // make 2 beeps indicating the motor enable
-        beepShort(4);
-        HAL_Delay(100);
-        cmdL = cmdR = 0;
-        enable_motors = 1; // enable motors
-      }
-
-      if (hw_type == HW_TYPE_KNEE) {
-        // Safety to stop operation if angle sensor reading failed TODO: adjust sensivity and add lowpass to angle sensor?
-        if ((ABS((hall_angle_offset[0] + ((motPosL / 15 / GEARBOX_RATIO_LEFT) % 360)) - (sensor_angle[0] * ANGLE_TO_DEGREES)) > 5) ||
-            (ABS((hall_angle_offset[1] + ((motPosR / 15 / GEARBOX_RATIO_RIGHT) % 360)) - (sensor_angle[1] * ANGLE_TO_DEGREES)) > 5)) {
+        if (!enable_motors || (torque_cmd_timeout > 10)) {
           cmdL = cmdR = 0;
         }
-        // Safety to stop movement when reaching dead angles, around 20 and 340 degrees
-        if (((sensor_angle[0] < 900) && (cmdL < 0)) || ((sensor_angle[0] > 15500) && (cmdL > 0))) {
-          cmdL = 0;
-        }
-        if (((sensor_angle[1] < 900) && (cmdR < 0)) || ((sensor_angle[1] > 15500) && (cmdR > 0))) {
-          cmdR = 0;
-        }
-      }
 
-      if (ABS(cmdL) < 10) {
-        rtP_Left.n_cruiseMotTgt   = 0;
-        rtP_Left.b_cruiseCtrlEna  = 1;
-      } else {
-        rtP_Left.b_cruiseCtrlEna  = 0;
-        if (hw_type == HW_TYPE_KNEE) {
-          pwml = -CLAMP((int)cmdL, -TRQ_LIMIT_LEFT, TRQ_LIMIT_LEFT);
-        } else {
-          pwml = CLAMP((int)cmdL, -TORQUE_BASE_MAX, TORQUE_BASE_MAX);
+        if (ignition == 1 && enable_motors == 0 && (!rtY_Left.z_errCode && !rtY_Right.z_errCode) && (ABS(cmdL) < 50 && ABS(cmdR) < 50)) {
+          beepShort(6); // make 2 beeps indicating the motor enable
+          beepShort(4);
+          HAL_Delay(100);
+          cmdL = cmdR = 0;
+          enable_motors = 1; // enable motors
         }
-      }
-      if (ABS(cmdR) < 10) {
-        rtP_Right.n_cruiseMotTgt  = 0;
-        rtP_Right.b_cruiseCtrlEna = 1;
-      } else {
-        rtP_Right.b_cruiseCtrlEna = 0;
-        if (hw_type == HW_TYPE_KNEE) {
-          pwmr = -CLAMP((int)cmdR, -TRQ_LIMIT_RIGHT, TRQ_LIMIT_RIGHT);
-        } else {
-          pwmr = -CLAMP((int)cmdR, -TORQUE_BASE_MAX, TORQUE_BASE_MAX);
-        }
-      }
 
-      // runs at ~100Hz
-      if ((buzzerTimer - (main_loop_100Hz - main_loop_100Hz_runtime)) > 16*10) {
-        main_loop_100Hz_runtime = buzzerTimer;
-        main_loop_100Hz = buzzerTimer;
+        if (hw_type == HW_TYPE_KNEE) {
+          // Safety to stop operation if angle sensor reading failed TODO: adjust sensivity and add lowpass to angle sensor?
+          if ((ABS((hall_angle_offset[0] + ((motPosL / 15 / GEARBOX_RATIO_LEFT) % 360)) - (sensor_angle[0] * ANGLE_TO_DEGREES)) > 5) ||
+              (ABS((hall_angle_offset[1] + ((motPosR / 15 / GEARBOX_RATIO_RIGHT) % 360)) - (sensor_angle[1] * ANGLE_TO_DEGREES)) > 5)) {
+            cmdL = cmdR = 0;
+          }
+          // Safety to stop movement when reaching dead angles, around 20 and 340 degrees
+          if (((sensor_angle[0] < 900) && (cmdL < 0)) || ((sensor_angle[0] > 15500) && (cmdL > 0))) {
+            cmdL = 0;
+          }
+          if (((sensor_angle[1] < 900) && (cmdR < 0)) || ((sensor_angle[1] > 15500) && (cmdR > 0))) {
+            cmdR = 0;
+          }
+        }
+
+        if (ABS(cmdL) < 10) {
+          rtP_Left.n_cruiseMotTgt   = 0;
+          rtP_Left.b_cruiseCtrlEna  = 1;
+        } else {
+          rtP_Left.b_cruiseCtrlEna  = 0;
+          if (hw_type == HW_TYPE_KNEE) {
+            pwml = -CLAMP((int)cmdL, -TRQ_LIMIT_LEFT, TRQ_LIMIT_LEFT);
+          } else {
+            pwml = CLAMP((int)cmdL, -TORQUE_BASE_MAX, TORQUE_BASE_MAX);
+          }
+        }
+        if (ABS(cmdR) < 10) {
+          rtP_Right.n_cruiseMotTgt  = 0;
+          rtP_Right.b_cruiseCtrlEna = 1;
+        } else {
+          rtP_Right.b_cruiseCtrlEna = 0;
+          if (hw_type == HW_TYPE_KNEE) {
+            pwmr = -CLAMP((int)cmdR, -TRQ_LIMIT_RIGHT, TRQ_LIMIT_RIGHT);
+          } else {
+            pwmr = -CLAMP((int)cmdR, -TORQUE_BASE_MAX, TORQUE_BASE_MAX);
+          }
+        }
+
         if (ignition_off_counter <= 10) {
           // MOTORS_DATA: speed_L(2), speed_R(2), counter(1), checksum(1)
           uint8_t dat[8];
@@ -280,13 +280,13 @@ int main(void) {
           can_send_msg((0x207U + board.can_addr_offset), ((dat[5] << 8U) | dat[4]), ((dat[3] << 24U) | (dat[2] << 16U) | (dat[1] << 8U) | dat[0]), 6U);
         }
         torque_cmd_timeout = (torque_cmd_timeout < MAX_uint32_T) ? (torque_cmd_timeout+1) : 0;
-        main_loop_100Hz_runtime = buzzerTimer - main_loop_100Hz_runtime;
+        main_loop_100Hz_runtime = HAL_GetTick() - main_loop_100Hz_runtime;
+        main_loop_100Hz = HAL_GetTick();
       }
 
-      // runs at ~10Hz
-       if ((buzzerTimer - (main_loop_10Hz - main_loop_10Hz_runtime)) > 16*100) {
-        main_loop_10Hz_runtime = buzzerTimer;
-        main_loop_10Hz = buzzerTimer;
+      // runs at 10Hz
+       if ((HAL_GetTick() - (main_loop_10Hz - main_loop_10Hz_runtime)) >= 100) {
+        main_loop_10Hz_runtime = HAL_GetTick();
         if (ignition_off_counter <= 10) {
           // VAR_VALUES: fault_status(0:6), enable_motors(0:1), ignition(0:1), left motor error(1), right motor error(1), global fault status(1)
           uint8_t dat[2];
@@ -296,13 +296,18 @@ int main(void) {
           can_send_msg((0x202U + board.can_addr_offset), 0x0U, ((dat[2] << 16U) | (dat[1] << 8U) | dat[0]), 3U);
         }
         out_enable(LED_GREEN, ignition);
-        main_loop_10Hz_runtime = buzzerTimer - main_loop_10Hz_runtime;
+        
+        if (hw_type == HW_TYPE_BASE) {
+          poweroffPressCheck();
+        }
+
+        main_loop_10Hz_runtime = HAL_GetTick() - main_loop_10Hz_runtime;
+        main_loop_10Hz = HAL_GetTick();
       }
 
-      // runs at ~1Hz
-      if ((buzzerTimer - (main_loop_1Hz - main_loop_1Hz_runtime)) > 16*1000) {
-        main_loop_1Hz_runtime = buzzerTimer;
-        main_loop_1Hz = buzzerTimer;
+      // runs at 1Hz
+      if ((HAL_GetTick() - (main_loop_1Hz - main_loop_1Hz_runtime)) >= 1000) {
+        main_loop_1Hz_runtime = HAL_GetTick();
          // ####### CALC BOARD TEMPERATURE #######
         filtLowPass32(adc_buffer.temp, TEMP_FILT_COEF, &board_temp_adcFixdt);
         board_temp_adcFilt  = (int16_t)(board_temp_adcFixdt >> 16);  // convert fixed-point to integer
@@ -330,32 +335,30 @@ int main(void) {
         } else {
           ignition_off_counter = (ignition_off_counter < MAX_uint32_T) ? (ignition_off_counter+1) : 0;
         }
-        main_loop_1Hz_runtime = buzzerTimer - main_loop_1Hz_runtime;
+
+        if ((TEMP_POWEROFF_ENABLE && board_temp_deg_c >= TEMP_POWEROFF && speedAvgAbs < 20) || (batVoltage < BAT_DEAD && speedAvgAbs < 20)) {  // poweroff before mainboard burns OR low bat 3
+          poweroff();
+        } else if (rtY_Left.z_errCode || rtY_Right.z_errCode) { // 1 beep (low pitch): Motor error, disable motors
+          enable_motors = 0;
+          beepCount(1, 24, 1);
+        } else if (TEMP_WARNING_ENABLE && board_temp_deg_c >= TEMP_WARNING) { // 5 beeps (low pitch): Mainboard temperature warning
+          beepCount(5, 24, 1);
+        } else if (batVoltage < BAT_LVL1) { // 1 beep fast (medium pitch): Low bat 1
+          beepCount(0, 10, 6);
+          out_enable(LED_RED, true);
+        } else if (batVoltage < BAT_LVL2) { // 1 beep slow (medium pitch): Low bat 2
+          beepCount(0, 10, 30);
+        } else {  // do not beep
+          beepCount(0, 0, 0);
+          out_enable(LED_RED, false);
+        }
+
+        main_loop_1Hz_runtime = HAL_GetTick() - main_loop_1Hz_runtime;
+        main_loop_1Hz = HAL_GetTick();
       }
 
       process_can();
-      if (hw_type == HW_TYPE_BASE) {
-        poweroffPressCheck();
-      }
-
-      if ((TEMP_POWEROFF_ENABLE && board_temp_deg_c >= TEMP_POWEROFF && speedAvgAbs < 20) || (batVoltage < BAT_DEAD && speedAvgAbs < 20)) {  // poweroff before mainboard burns OR low bat 3
-        poweroff();
-      } else if (rtY_Left.z_errCode || rtY_Right.z_errCode) { // 1 beep (low pitch): Motor error, disable motors
-        enable_motors = 0;
-        beepCount(1, 24, 1);
-      } else if (TEMP_WARNING_ENABLE && board_temp_deg_c >= TEMP_WARNING) { // 5 beeps (low pitch): Mainboard temperature warning
-        beepCount(5, 24, 1);
-      } else if (batVoltage < BAT_LVL1) { // 1 beep fast (medium pitch): Low bat 1
-        beepCount(0, 10, 6);
-        out_enable(LED_RED, true);
-      } else if (batVoltage < BAT_LVL2) { // 1 beep slow (medium pitch): Low bat 2
-        beepCount(0, 10, 30);
-      } else {  // do not beep
-        beepCount(0, 0, 0);
-        out_enable(LED_RED, false);
-      }
-
-      buzzerTimer_prev = buzzerTimer;
+      tick_prev = HAL_GetTick();
     }
   }
 }
