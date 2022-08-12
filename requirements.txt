@@ -1,3 +1,5 @@
-pylint
+cffi
 scons
+pylint
+pre-commit
 pycryptodome==3.9.8
