@@ -1,8 +1,14 @@
-Flash bootstub and app:
-./recover.sh
+# comma body
 
-Flash app through CAN bus with panda:
-./flash_can.sh
+This the firmware for the comma body robotics dev kit.
 
-Compile:
-scons
+
+Learn more at [commabody.com](https://commabody.com/).
+
+## building
+
+Compile: `scons`
+
+Flash bootstub and app: `board/recover.sh`
+
+Flash app through CAN bus with panda: `board/flash_can.sh`
