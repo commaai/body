@@ -296,10 +296,6 @@ int main(void) {
           can_send_msg((0x202U + board.can_addr_offset), 0x0U, ((dat[2] << 16U) | (dat[1] << 8U) | dat[0]), 3U);
         }
         out_enable(LED_GREEN, ignition);
-        
-        if (hw_type == HW_TYPE_BASE) {
-          poweroffPressCheck();
-        }
 
         main_loop_10Hz_runtime = HAL_GetTick() - main_loop_10Hz_runtime;
         main_loop_10Hz = HAL_GetTick();
@@ -336,17 +332,17 @@ int main(void) {
           ignition_off_counter = (ignition_off_counter < MAX_uint32_T) ? (ignition_off_counter+1) : 0;
         }
 
-        if ((TEMP_POWEROFF_ENABLE && board_temp_deg_c >= TEMP_POWEROFF && speedAvgAbs < 20) || (batVoltage < BAT_DEAD && speedAvgAbs < 20)) {  // poweroff before mainboard burns OR low bat 3
+        if ((TEMP_POWEROFF_ENABLE && board_temp_deg_c >= TEMP_POWEROFF && speedAvgAbs < 20) || (batVoltageCalib < BAT_DEAD && speedAvgAbs < 20)) {  // poweroff before mainboard burns OR low bat 3
           poweroff();
         } else if (rtY_Left.z_errCode || rtY_Right.z_errCode) { // 1 beep (low pitch): Motor error, disable motors
           enable_motors = 0;
           beepCount(1, 24, 1);
         } else if (TEMP_WARNING_ENABLE && board_temp_deg_c >= TEMP_WARNING) { // 5 beeps (low pitch): Mainboard temperature warning
           beepCount(5, 24, 1);
-        } else if (batVoltage < BAT_LVL1) { // 1 beep fast (medium pitch): Low bat 1
+        } else if (batVoltageCalib < BAT_LVL1) { // 1 beep fast (medium pitch): Low bat 1
           beepCount(0, 10, 6);
           out_enable(LED_RED, true);
-        } else if (batVoltage < BAT_LVL2) { // 1 beep slow (medium pitch): Low bat 2
+        } else if (batVoltageCalib < BAT_LVL2) { // 1 beep slow (medium pitch): Low bat 2
           beepCount(0, 10, 30);
         } else {  // do not beep
           beepCount(0, 0, 0);
@@ -355,6 +351,10 @@ int main(void) {
 
         main_loop_1Hz_runtime = HAL_GetTick() - main_loop_1Hz_runtime;
         main_loop_1Hz = HAL_GetTick();
+      }
+
+      if (hw_type == HW_TYPE_BASE) {
+        poweroffPressCheck();
       }
 
       process_can();
