@@ -1,7 +1,7 @@
 // maximum 500kbps! (or needs clock change)
-#define CAN_QUANTA 16U
-#define CAN_SEQ1 13U // roundf(quanta * 0.875f) - 1;
-#define CAN_SEQ2 2U // roundf(quanta * 0.125f);
+#define CAN_QUANTA 8U
+#define CAN_SEQ1 6U // roundf(quanta * 0.875f) - 1;
+#define CAN_SEQ2 1U // roundf(quanta * 0.125f);
 
 #define CAN_PCLK (CORE_FREQ / 2U / 1000U)
 // 333 = 33.3 kbps
