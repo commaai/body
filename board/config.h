@@ -20,8 +20,6 @@
 #define TRQ_LIMIT_LEFT          400      // Torque limit for knee gearbox(left)
 #define TRQ_LIMIT_RIGHT         200      // Torque limit for hip gearbox(right)
 
-#define KNEE_ADDR_OFFSET        0x100
-
 #define BAT_FILT_COEF           655       // battery voltage filter coefficient in fixed-point. coef_fixedPoint = coef_floatingPoint * 2^16. In this case 655 = 0.01 * 2^16
 #define BAT_CALIB_REAL_VOLTAGE  3192      // input voltage measured by multimeter (multiplied by 100). In this case 43.00 V * 100 = 4300
 #define BAT_CALIB_ADC           1275      // adc-value measured by mainboard (value nr 5 on UART debug output)
