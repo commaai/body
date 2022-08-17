@@ -166,7 +166,8 @@ typedef struct {
   GPIO_TypeDef* ignition_port;
   uint16_t ignition_pin;
 
-  uint32_t can_addr_offset;
+  uint16_t can_addr_offset;
+  uint8_t uds_offset;
 
   GPIO_TypeDef* led_portR;
   uint16_t led_pinR;

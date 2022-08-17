@@ -40,6 +40,7 @@ void board_detect(void) {
     board.led_portB = GPIOC;
 
     board.can_addr_offset = 0x0U;
+    board.uds_offset = 0x0U;
 
   } else if (hw_type == HW_TYPE_KNEE) {
     board.hall_left.hall_portA = GPIOC;
@@ -76,7 +77,8 @@ void board_detect(void) {
     board.led_pinB = GPIO_PIN_5;
     board.led_portB = GPIOB;
 
-    board.can_addr_offset = KNEE_ADDR_OFFSET;
+    board.can_addr_offset = 0x100U;
+    board.uds_offset = 0x10U;
 
     #ifndef BOOTSTUB
     MX_I2C_Init();

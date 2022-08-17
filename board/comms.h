@@ -97,8 +97,8 @@ void process_can(void) {
 
 void can_rx(void) {
   while ((board.CAN->RF0R & CAN_RF0R_FMP0) != 0) {
-    int address = board.CAN->sFIFOMailBox[0].RIR >> 21;
-    if (address == (int32_t)(0x250U + board.can_addr_offset)) {
+    uint32_t address = board.CAN->sFIFOMailBox[0].RIR >> 21;
+    if (address == (0x250U + board.can_addr_offset)) {
       if ((GET_MAILBOX_BYTES_04(&board.CAN->sFIFOMailBox[0]) == 0xdeadface) && (GET_MAILBOX_BYTES_48(&board.CAN->sFIFOMailBox[0]) == 0x0ab00b1e)) {
         enter_bootloader_mode = ENTER_SOFTLOADER_MAGIC;
         NVIC_SystemReset();
@@ -121,7 +121,7 @@ void can_rx(void) {
         current_idx = idx;
       }
       out_enable(LED_BLUE, true);
-    } else if (address == (int32_t)(0x251U + board.can_addr_offset)) {
+    } else if (address == (0x251U + board.can_addr_offset)) {
       #define MSG_SPD_LEN 5
       uint8_t dat[MSG_TRQ_LEN];
       for (int i=0; i<MSG_TRQ_LEN; i++) {
@@ -139,11 +139,12 @@ void can_rx(void) {
         }
       }
       out_enable(LED_BLUE, true);
-    } else if ((hw_type == HW_TYPE_BASE) && ((address == BROADCAST_ADDR) || (address == FALLBACK_ADDR) || (address == ECU_ADDR) || (address == DEBUG_ADDR))) { // Process UBS and OBD2 requests, ignore for knee
+    } else if ((address == BROADCAST_ADDR) || // Process UBS and OBD2 requests
+              (address == FALLBACK_ADDR) ||
+              (address == (ECU_ADDR + board.uds_offset)) ||
+              (address == (DEBUG_ADDR + board.uds_offset))) {
       process_uds(address, GET_MAILBOX_BYTES_04(&board.CAN->sFIFOMailBox[0]));
       out_enable(LED_BLUE, true);
-    } else if ((hw_type == HW_TYPE_BASE) && (address == 0x203U + KNEE_ADDR_OFFSET)) { // detect knee by body and set flag for use with UDS message
-      knee_detected = 1;
     }
     // next
     board.CAN->RF0R |= CAN_RF0R_RFOM0;
