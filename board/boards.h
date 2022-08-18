@@ -77,7 +77,7 @@ void board_detect(void) {
     board.led_pinB = GPIO_PIN_5;
     board.led_portB = GPIOB;
 
-    board.can_addr_offset = 0x100U;
+    board.can_addr_offset = KNEE_ADDR_OFFSET;
     board.uds_offset = 0x10U;
 
     #ifndef BOOTSTUB

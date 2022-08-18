@@ -120,6 +120,7 @@ int main(void) {
   } else {
     out_enable(POWERSWITCH, false);
     ignition = 1;
+    knee_detected = 1;
   }
   // Reset LEDs on startup
   out_enable(LED_RED, false);
@@ -332,17 +333,17 @@ int main(void) {
           ignition_off_counter = (ignition_off_counter < MAX_uint32_T) ? (ignition_off_counter+1) : 0;
         }
 
-        if ((TEMP_POWEROFF_ENABLE && board_temp_deg_c >= TEMP_POWEROFF && speedAvgAbs < 20) || (batVoltageCalib < BAT_DEAD && speedAvgAbs < 20)) {  // poweroff before mainboard burns OR low bat 3
+        if ((TEMP_POWEROFF_ENABLE && board_temp_deg_c >= TEMP_POWEROFF && speedAvgAbs < 20) || (batVoltage < BAT_DEAD && speedAvgAbs < 20)) {  // poweroff before mainboard burns OR low bat 3
           poweroff();
         } else if (rtY_Left.z_errCode || rtY_Right.z_errCode) { // 1 beep (low pitch): Motor error, disable motors
           enable_motors = 0;
           beepCount(1, 24, 1);
         } else if (TEMP_WARNING_ENABLE && board_temp_deg_c >= TEMP_WARNING) { // 5 beeps (low pitch): Mainboard temperature warning
           beepCount(5, 24, 1);
-        } else if (batVoltageCalib < BAT_LVL1) { // 1 beep fast (medium pitch): Low bat 1
+        } else if (batVoltage < BAT_LVL1) { // 1 beep fast (medium pitch): Low bat 1
           beepCount(0, 10, 6);
           out_enable(LED_RED, true);
-        } else if (batVoltageCalib < BAT_LVL2) { // 1 beep slow (medium pitch): Low bat 2
+        } else if (batVoltage < BAT_LVL2) { // 1 beep slow (medium pitch): Low bat 2
           beepCount(0, 10, 30);
         } else {  // do not beep
           beepCount(0, 0, 0);

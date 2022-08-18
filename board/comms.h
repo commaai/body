@@ -145,6 +145,8 @@ void can_rx(void) {
               (address == (DEBUG_ADDR + board.uds_offset))) {
       process_uds(address, GET_MAILBOX_BYTES_04(&board.CAN->sFIFOMailBox[0]));
       out_enable(LED_BLUE, true);
+    } else if ((hw_type == HW_TYPE_BASE) && (address == 0x203U + KNEE_ADDR_OFFSET)) { // detect knee by body and set flag for use with UDS message
+      knee_detected = 1;
     }
     // next
     board.CAN->RF0R |= CAN_RF0R_RFOM0;
