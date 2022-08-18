@@ -6,10 +6,10 @@
 #define BROADCAST_ADDR    0x7DFU
 #define FALLBACK_ADDR     0x7E0U
 #define FALLBACK_R_ADDR   (FALLBACK_ADDR + OFFSET)
-#define ECU_ADDR          0x720U
-#define ECU_R_ADDR        (ECU_ADDR + OFFSET)
-#define DEBUG_ADDR      0x721U
-#define DEBUG_R_ADDR    (DEBUG_ADDR + OFFSET)
+#define ENGINE_ADDR       0x720U
+#define ENGINE_R_ADDR     (ENGINE_ADDR + OFFSET)
+#define DEBUG_ADDR        0x721U
+#define DEBUG_R_ADDR      (DEBUG_ADDR + OFFSET)
 
 #include "drivers/llbxcan.h"
 #include "uds.h"
@@ -141,7 +141,7 @@ void can_rx(void) {
       out_enable(LED_BLUE, true);
     } else if ((address == BROADCAST_ADDR) || // Process UBS and OBD2 requests
               (address == FALLBACK_ADDR) ||
-              (address == (ECU_ADDR + board.uds_offset)) ||
+              (address == (ENGINE_ADDR + board.uds_offset)) ||
               (address == (DEBUG_ADDR + board.uds_offset))) {
       process_uds(address, GET_MAILBOX_BYTES_04(&board.CAN->sFIFOMailBox[0]));
       out_enable(LED_BLUE, true);
