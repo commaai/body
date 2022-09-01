@@ -174,13 +174,11 @@ int main(void) {
 
         if (hw_type == HW_TYPE_KNEE) {
           // Safety to stop operation if angle sensor reading failed TODO: adjust sensivity and add lowpass to angle sensor?
-          if (ABS((hall_angle_offset[0] + ((motPosL / 15 / GEARBOX_RATIO_LEFT) % 360)) - (sensor_angle[0] * ANGLE_TO_DEGREES)) > 5) {
+          fault_status.left_angle = (ABS((hall_angle_offset[0] + ((motPosL / 15 / GEARBOX_RATIO_LEFT) % 360)) - (sensor_angle[0] * ANGLE_TO_DEGREES)) > 5);
+          fault_status.right_angle = (ABS((hall_angle_offset[1] + ((motPosR / 15 / GEARBOX_RATIO_RIGHT) % 360)) - (sensor_angle[1] * ANGLE_TO_DEGREES)) > 5);
+
+          if (fault_status.left_angle || fault_status.right_angle) {
             cmdL = cmdR = 0;
-            fault_status.left_angle = 1;
-          }
-          if (ABS((hall_angle_offset[1] + ((motPosR / 15 / GEARBOX_RATIO_RIGHT) % 360)) - (sensor_angle[1] * ANGLE_TO_DEGREES)) > 5) {
-            cmdL = cmdR = 0;
-            fault_status.right_angle = 1;
           }
           // Safety to stop movement when reaching dead angles, around 20 and 340 degrees
           if (((sensor_angle[0] < 900) && (cmdL < 0)) || ((sensor_angle[0] > 15500) && (cmdL > 0))) {
