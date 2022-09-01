@@ -340,6 +340,8 @@ int main(void) {
         } else if (rtY_Left.z_errCode || rtY_Right.z_errCode) { // 1 beep (low pitch): Motor error, disable motors
           enable_motors = 0;
           beepCount(1, 24, 1);
+        } else if (fault_status.left_angle || fault_status.left_i2c || fault_status.right_angle || fault_status.right_i2c) { // 2 beeps (low pitch): Motor error, disable motors
+          beepCount(2, 24, 1);
         } else if (TEMP_WARNING_ENABLE && board_temp_deg_c >= TEMP_WARNING) { // 5 beeps (low pitch): Mainboard temperature warning
           beepCount(5, 24, 1);
         } else if (batVoltage < BAT_LVL1) { // 1 beep fast (medium pitch): Low bat 1
