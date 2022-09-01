@@ -58,6 +58,9 @@ extern board_t board;
 extern volatile uint32_t buzzerTimer;
 volatile uint32_t torque_cmd_timeout = 0U;
 volatile uint32_t ignition_off_counter = 0U;
+
+uint16_t cnt_press = 0;
+
 int16_t batVoltageCalib;         // global variable for calibrated battery voltage
 int16_t board_temp_deg_c;        // global variable for calibrated temperature in degrees Celsius
 volatile int16_t cmdL;                    // global variable for Left Command
@@ -357,7 +360,17 @@ int main(void) {
       }
 
       if (hw_type == HW_TYPE_BASE) {
-        poweroffPressCheck();
+        if (HAL_GPIO_ReadPin(BUTTON_PORT, BUTTON_PIN)) {
+          cnt_press += 1;
+          if (cnt_press == (2 * 1008)) {
+            poweroff();
+          }
+        } else if (cnt_press >= 10) {
+          ignition = !ignition;
+          out_enable(IGNITION, ignition);
+          beepShort(5);
+          cnt_press = 0;
+        }
       }
 
       process_can();
