@@ -9,6 +9,10 @@ Learn more at [commabody.com](https://commabody.com/).
 
 Compile: `scons`
 
-Flash bootstub and app: `board/recover.sh`
+Flash bootstub and app: `board/recover.sh`  # STM flasher should be connected to debug port, needs openocd
 
-Flash app through CAN bus with panda: `board/flash_can.sh`
+Flash app through CAN bus with panda:
+
+`board/flash_base.sh`  # base motherboard
+
+`board/flash_knee.sh`  # knee motherboard
