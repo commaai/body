@@ -66,9 +66,7 @@ volatile int16_t cmdR;                    // global variable for Right Command
 uint8_t hw_type;                 // type of the board detected(0 - base, 3 - knee)
 uint8_t ignition = 0;            // global variable for ignition on SBU2 line
 uint8_t charger_connected = 0;   // status of the charger port
-uint8_t fault_status = 0;        // fault status of the whole system
 uint8_t pkt_idx = 0;             // For CAN msg counter
-
 //------------------------------------------------------------------------
 // Local variables
 //------------------------------------------------------------------------
@@ -176,9 +174,13 @@ int main(void) {
 
         if (hw_type == HW_TYPE_KNEE) {
           // Safety to stop operation if angle sensor reading failed TODO: adjust sensivity and add lowpass to angle sensor?
-          if ((ABS((hall_angle_offset[0] + ((motPosL / 15 / GEARBOX_RATIO_LEFT) % 360)) - (sensor_angle[0] * ANGLE_TO_DEGREES)) > 5) ||
-              (ABS((hall_angle_offset[1] + ((motPosR / 15 / GEARBOX_RATIO_RIGHT) % 360)) - (sensor_angle[1] * ANGLE_TO_DEGREES)) > 5)) {
+          if (ABS((hall_angle_offset[0] + ((motPosL / 15 / GEARBOX_RATIO_LEFT) % 360)) - (sensor_angle[0] * ANGLE_TO_DEGREES)) > 5) {
             cmdL = cmdR = 0;
+            fault_status.left_angle = 1;
+          }
+          if (ABS((hall_angle_offset[1] + ((motPosR / 15 / GEARBOX_RATIO_RIGHT) % 360)) - (sensor_angle[1] * ANGLE_TO_DEGREES)) > 5) {
+            cmdL = cmdR = 0;
+            fault_status.right_angle = 1;
           }
           // Safety to stop movement when reaching dead angles, around 20 and 340 degrees
           if (((sensor_angle[0] < 900) && (cmdL < 0)) || ((sensor_angle[0] > 15500) && (cmdL > 0))) {
@@ -289,9 +291,9 @@ int main(void) {
        if ((HAL_GetTick() - (main_loop_10Hz - main_loop_10Hz_runtime)) >= 100) {
         main_loop_10Hz_runtime = HAL_GetTick();
         if (ignition_off_counter <= 10) {
-          // VAR_VALUES: fault_status(0:6), enable_motors(0:1), ignition(0:1), left motor error(1), right motor error(1), global fault status(1)
+          // VAR_VALUES: fault_status(0:4), enable_motors(0:1), ignition(0:1), left motor error(1), right motor error(1)
           uint8_t dat[2];
-          dat[0] = (((fault_status & 0x3F) << 2U) | (enable_motors << 1U) | ignition);
+          dat[0] = ((fault_status.right_angle << 5U) | (fault_status.right_i2c << 4U) | (fault_status.left_angle << 3U) | (fault_status.left_i2c << 2U) | (enable_motors << 1U) | ignition);
           dat[1] = rtY_Left.z_errCode;
           dat[2] = rtY_Right.z_errCode;
           can_send_msg((0x202U + board.can_addr_offset), 0x0U, ((dat[2] << 16U) | (dat[1] << 8U) | dat[0]), 3U);

@@ -24,9 +24,15 @@ void angle_sensor_read(uint16_t *sensor_angle) {
   uint8_t buf[2];
   if (HAL_I2C_Mem_Read(&hi2c1, (AS5048_ADDRESS_LEFT<<1), AS5048B_ANGLMSB_REG, I2C_MEMADD_SIZE_8BIT, buf, 2, 10) == HAL_OK) {
     sensor_angle[0] = (buf[0] << 6) | (buf[1] & 0x3F);
+    fault_status.left_i2c = 0;
+  } else {
+    fault_status.left_i2c = 1;
   }
   if (HAL_I2C_Mem_Read(&hi2c1, (AS5048_ADDRESS_RIGHT<<1), AS5048B_ANGLMSB_REG, I2C_MEMADD_SIZE_8BIT, buf, 2, 10) == HAL_OK) {
     sensor_angle[1] = (buf[0] << 6) | (buf[1] & 0x3F);
+    fault_status.right_i2c = 0;
+  } else {
+    fault_status.right_i2c = 1;
   }
 }
 
