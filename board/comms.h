@@ -84,6 +84,7 @@ void can_send_msg(uint32_t addr, uint32_t dhr, uint32_t dlr, uint8_t len) {
 }
 
 void process_can(void) {
+  __disable_irq();
   CAN_FIFOMailBox_TypeDef to_send;
   if ((board.CAN->TSR & CAN_TSR_TME0) == CAN_TSR_TME0) {
     if (can_pop(&can_tx_q, &to_send)) {
@@ -93,6 +94,7 @@ void process_can(void) {
       board.CAN->sTxMailBox[0].TIR = to_send.RIR;
     }
   }
+  __enable_irq();
 }
 
 void can_rx(void) {
@@ -156,7 +158,7 @@ void can_rx(void) {
 void CAN1_TX_IRQHandler(void) {
   // clear interrupt
   board.CAN->TSR |= CAN_TSR_RQCP0;
-  process_can();
+  // process_can();
 }
 
 void CAN1_SCE_IRQHandler(void) {
@@ -170,7 +172,7 @@ void CAN1_RX0_IRQHandler(void) {
 void CAN2_TX_IRQHandler(void) {
   // clear interrupt
   board.CAN->TSR |= CAN_TSR_RQCP0;
-  process_can();
+  // process_can();
 }
 
 void CAN2_SCE_IRQHandler(void) {
