@@ -5,6 +5,7 @@
 #include "stm32f4xx_hal.h"
 
 #define CORE_FREQ               96000000U // MCU frequency in hertz
+#define I2C_CLOCKSPEED          100 // I2C clock in kHz
 #define PWM_FREQ                16000     // PWM frequency in Hz / is also used for buzzer
 #define DEAD_TIME               48     // PWM deadtime
 #define DELAY_IN_MAIN_LOOP      5     // in ms. default 5. it is independent of all the timing critical stuff. do not touch if you do not know what you are doing.
