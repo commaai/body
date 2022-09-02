@@ -85,7 +85,7 @@ void can_send_msg(uint32_t addr, uint32_t dhr, uint32_t dlr, uint8_t len) {
 
 void process_can(void) {
   CAN_FIFOMailBox_TypeDef to_send;
-  if (board.CAN->TSR & CAN_TSR_TME0) {
+  if ((board.CAN->TSR & CAN_TSR_TME0) == CAN_TSR_TME0) {
     if (can_pop(&can_tx_q, &to_send)) {
       board.CAN->sTxMailBox[0].TDLR = to_send.RDLR;
       board.CAN->sTxMailBox[0].TDHR = to_send.RDHR;
