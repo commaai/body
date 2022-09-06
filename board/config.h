@@ -5,11 +5,13 @@
 #include "stm32f4xx_hal.h"
 
 #define CORE_FREQ               96000000U // MCU frequency in hertz
-#define I2C_CLOCKSPEED          100 // I2C clock in kHz
-#define PWM_FREQ                16000     // PWM frequency in Hz / is also used for buzzer
-#define DEAD_TIME               48     // PWM deadtime
-#define DELAY_IN_MAIN_LOOP      5     // in ms. default 5. it is independent of all the timing critical stuff. do not touch if you do not know what you are doing.
-#define A2BIT_CONV              50     // A to bit for current conversion on ADC. Example: 1 A = 50, 2 A = 100, etc
+#define I2C_CLOCKSPEED          100     // I2C clock in kHz
+#define PWM_FREQ                16000   // PWM frequency in Hz / is also used for buzzer
+#define DEAD_TIME               48      // PWM deadtime
+#define DELAY_IN_MAIN_LOOP      5       // in ms. default 5. it is independent of all the timing critical stuff. do not touch if you do not know what you are doing.
+#define A2BIT_CONV              50      // A to bit for current conversion on ADC. Example: 1 A = 50, 2 A = 100, etc
+
+#define IGNITION_OFF_DELAY      2       // Stop sending CAN messages after 2 seconds
 
 #define ADC_CONV_CLOCK_CYCLES   (ADC_SAMPLETIME_15CYCLES)
 #define ADC_CLOCK_DIV           (4)

@@ -215,7 +215,7 @@ int main(void) {
           }
         }
 
-        if (ignition_off_counter <= 10) {
+        if (ignition_off_counter <= IGNITION_OFF_DELAY) {
           // MOTORS_DATA: speed_L(2), speed_R(2), counter(1), checksum(1)
           uint8_t dat[8];
           uint16_t speedL = rtY_Left.n_mot;
@@ -291,7 +291,7 @@ int main(void) {
       // runs at 10Hz
        if ((HAL_GetTick() - (main_loop_10Hz - main_loop_10Hz_runtime)) >= 100) {
         main_loop_10Hz_runtime = HAL_GetTick();
-        if (ignition_off_counter <= 10) {
+        if (ignition_off_counter <= IGNITION_OFF_DELAY) {
           // VAR_VALUES: fault_status(0:4), enable_motors(0:1), ignition(0:1), left motor error(1), right motor error(1)
           uint8_t dat[2];
           dat[0] = ((fault_status.right_angle << 5U) | (fault_status.right_i2c << 4U) | (fault_status.left_angle << 3U) | (fault_status.left_i2c << 2U) | (enable_motors << 1U) | ignition);
@@ -330,7 +330,7 @@ int main(void) {
         out_enable(LED_BLUE, false); // Reset LED after CAN RX
         out_enable(LED_GREEN, true); // Always use LED to show that body is on
 
-        if (ignition) {
+        if ((hw_type == HW_TYPE_BASE) && ignition) {
           ignition_off_counter = 0;
         } else {
           ignition_off_counter = (ignition_off_counter < MAX_uint32_T) ? (ignition_off_counter+1) : 0;
