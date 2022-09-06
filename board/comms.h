@@ -162,7 +162,7 @@ void can_rx(void) {
 void CAN1_TX_IRQHandler(void) {
   // clear interrupt
   board.CAN->TSR |= CAN_TSR_RQCP0;
-  // process_can();
+  process_can();
 }
 
 void CAN1_SCE_IRQHandler(void) {
@@ -176,7 +176,7 @@ void CAN1_RX0_IRQHandler(void) {
 void CAN2_TX_IRQHandler(void) {
   // clear interrupt
   board.CAN->TSR |= CAN_TSR_RQCP0;
-  // process_can();
+  process_can();
 }
 
 void CAN2_SCE_IRQHandler(void) {
