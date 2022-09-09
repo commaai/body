@@ -1,13 +1,11 @@
-// maximum 500kbps! (or needs clock change)
-#define CAN_QUANTA 8U
-#define CAN_SEQ1 6U // roundf(quanta * 0.875f) - 1;
-#define CAN_SEQ2 1U // roundf(quanta * 0.125f);
+// SAE 2284-3 : minimum 16 tq, SJW 3, sample point at 81.3%
+#define CAN_QUANTA 16U
+#define CAN_SEQ1 12U
+#define CAN_SEQ2 3U
+#define CAN_SJW  3U
 
 #define CAN_PCLK (CORE_FREQ / 2U / 1000U)
-// 333 = 33.3 kbps
-// 5000 = 500 kbps
 #define can_speed_to_prescaler(x) (CAN_PCLK / CAN_QUANTA * 10U / (x))
-
 #define CAN_INIT_TIMEOUT_MS 500
 
 bool llcan_set_speed(CAN_TypeDef *CAN_obj, uint32_t speed, bool loopback, bool silent) {
@@ -30,7 +28,10 @@ bool llcan_set_speed(CAN_TypeDef *CAN_obj, uint32_t speed, bool loopback, bool s
 
   if(ret){
     // set time quanta from defines
-    CAN_obj->BTR = ((CAN_BTR_TS1_0 * (CAN_SEQ1-1)) | (CAN_BTR_TS2_0 * (CAN_SEQ2-1)) | (can_speed_to_prescaler(speed) - 1U));
+    CAN_obj->BTR = ((CAN_BTR_TS1_0 * (CAN_SEQ1-1)) |
+                    (CAN_BTR_TS2_0 * (CAN_SEQ2-1)) |
+                    (CAN_BTR_SJW_0 * (CAN_SJW-1)) |
+                    (can_speed_to_prescaler(speed) - 1U));
 
     // silent loopback mode for debugging
     if (loopback) {
@@ -43,7 +44,6 @@ bool llcan_set_speed(CAN_TypeDef *CAN_obj, uint32_t speed, bool loopback, bool s
     CAN_obj->MCR |= CAN_MCR_AWUM; // Automatic wakeup mode
     CAN_obj->MCR |= CAN_MCR_ABOM; // Automatic bus-off management
     CAN_obj->MCR &= ~CAN_MCR_NART; // Automatic retransmission
-    CAN_obj->MCR |= CAN_MCR_TTCM; // Time triggered mode
     CAN_obj->MCR |= CAN_MCR_TXFP; // Priority driven by the request order (chronologically)
     CAN_obj->MCR &= ~CAN_MCR_INRQ;
 
