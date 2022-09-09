@@ -11,7 +11,7 @@
 #define DELAY_IN_MAIN_LOOP      5       // in ms. default 5. it is independent of all the timing critical stuff. do not touch if you do not know what you are doing.
 #define A2BIT_CONV              50      // A to bit for current conversion on ADC. Example: 1 A = 50, 2 A = 100, etc
 
-#define IGNITION_OFF_DELAY      2       // Stop sending CAN messages after 2 seconds
+#define IGNITION_OFF_DELAY      5       // Stop sending CAN messages after 5 seconds
 
 #define ADC_CONV_CLOCK_CYCLES   (ADC_SAMPLETIME_15CYCLES)
 #define ADC_CLOCK_DIV           (4)
