@@ -108,8 +108,8 @@
 #define MAP(x, in_min, in_max, out_min, out_max) (((((x) - (in_min)) * ((out_max) - (out_min))) / ((in_max) - (in_min))) + (out_min))
 
 #define GET_MAILBOX_BYTE(msg, b) (((int)(b) > 3) ? (((msg)->RDHR >> (8U * ((unsigned int)(b) % 4U))) & 0xFFU) : (((msg)->RDLR >> (8U * (unsigned int)(b))) & 0xFFU))
-#define GET_MAILBOX_BYTES_04(msg) ((msg)->RDLR)
-#define GET_MAILBOX_BYTES_48(msg) ((msg)->RDHR)
+#define GET_MAILBOX_BYTES_03(msg) ((msg)->RDLR)
+#define GET_MAILBOX_BYTES_47(msg) ((msg)->RDHR)
 
 #define BOOT_NORMAL 0xdeadb111U
 #define ENTER_SOFTLOADER_MAGIC 0xdeadc0deU
