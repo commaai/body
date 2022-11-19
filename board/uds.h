@@ -5,6 +5,7 @@ uint8_t uid[10];
 uint32_t uds_engine_request = 0;
 uint32_t uds_debug_request = 0;
 uint8_t knee_detected = 0;
+uint8_t sep_time = 0;
 
 void process_uds(uint32_t addr, uint32_t dlr) {
   memcpy(uid, (void *)0x1FFF7A10U, 0xAU);
@@ -23,9 +24,13 @@ void process_uds(uint32_t addr, uint32_t dlr) {
         can_send_msg(FALLBACK_R_ADDR, 0x4D4F4390U, 0xF1621410U, 8U);
         break;
       // VIN continue
-      case 0x30U:
-        can_send_msg(FALLBACK_R_ADDR, 0x5659444FU, 0x42414D21U, 8U);
-        can_send_msg(FALLBACK_R_ADDR, 0x314E4F49U, 0x53524522U, 8U);
+      default:
+        if ((dlr & 0xFF) == 0x30U) {
+          sep_time = (dlr >> 16U) & 0xFF;
+          delay(sep_time);
+          can_send_msg(FALLBACK_R_ADDR, 0x5659444FU, 0x42414D21U, 8U);
+          can_send_msg(FALLBACK_R_ADDR, 0x314E4F49U, 0x53524522U, 8U);
+        }
         break;
     }
   } else if (addr == (ENGINE_ADDR + board.uds_offset)) { // UDS request to "main" ECU
@@ -59,24 +64,28 @@ void process_uds(uint32_t addr, uint32_t dlr) {
         uds_engine_request = 0xF190U;
         break;
       // FLOW CONTROL MESSAGE
-      case 0x30U:
-        switch(uds_engine_request) {
-          // APPLICATION SOFTWARE IDENTIFICATION : F181
-          case 0xF181U:
-            can_send_msg(ENGINE_R_ADDR + board.uds_offset, (knee_detected + 0x61), ((version[5] << 24U) | (version[4] << 16U) | (version[3] << 8U) | 0x21U), 8U);
-            uds_engine_request = 0;
-            break;
-          // ECU SERIAL NUMBER : F18C
-          case 0xF18CU:
-            can_send_msg(ENGINE_R_ADDR + board.uds_offset, ((uid[9] << 24U) | (uid[8] << 16U) | (uid[7]<< 8U) | uid[6]), ((uid[5] << 24U) | (uid[4] << 16U) | (uid[3] << 8U) | 0x21U), 8U);
-            uds_engine_request = 0;
-            break;
-          // VIN : F190
-          case 0xF190U:
-            can_send_msg(ENGINE_R_ADDR + board.uds_offset, 0x5659444FU, 0x42414D21U, 8U);
-            can_send_msg(ENGINE_R_ADDR + board.uds_offset, 0x314E4F49U, 0x53524522U, 8U);
-            uds_engine_request = 0;
-            break;
+      default:
+        if ((dlr & 0xFF) == 0x30U) {
+          sep_time = (dlr >> 16U) & 0xFF;
+          delay(sep_time);
+          switch(uds_engine_request) {
+            // APPLICATION SOFTWARE IDENTIFICATION : F181
+            case 0xF181U:
+              can_send_msg(ENGINE_R_ADDR + board.uds_offset, (knee_detected + 0x61), ((version[5] << 24U) | (version[4] << 16U) | (version[3] << 8U) | 0x21U), 8U);
+              uds_engine_request = 0;
+              break;
+            // ECU SERIAL NUMBER : F18C
+            case 0xF18CU:
+              can_send_msg(ENGINE_R_ADDR + board.uds_offset, ((uid[9] << 24U) | (uid[8] << 16U) | (uid[7]<< 8U) | uid[6]), ((uid[5] << 24U) | (uid[4] << 16U) | (uid[3] << 8U) | 0x21U), 8U);
+              uds_engine_request = 0;
+              break;
+            // VIN : F190
+            case 0xF190U:
+              can_send_msg(ENGINE_R_ADDR + board.uds_offset, 0x5659444FU, 0x42414D21U, 8U);
+              can_send_msg(ENGINE_R_ADDR + board.uds_offset, 0x314E4F49U, 0x53524522U, 8U);
+              uds_engine_request = 0;
+              break;
+          }
         }
         break;
     }
@@ -100,13 +109,17 @@ void process_uds(uint32_t addr, uint32_t dlr) {
         can_send_msg((DEBUG_R_ADDR + board.uds_offset), ((gitversion[2] << 24U) | (gitversion[1] << 16U) | (gitversion[0] << 8U) | 0x81U), 0xF1620B10U, 8U);
         uds_debug_request = 0xF181U;
         break;
-      case 0x30U:
-        switch(uds_debug_request) {
-          // APPLICATION SOFTWARE IDENTIFICATION : F181
-          case 0xF181U:
-            can_send_msg((DEBUG_R_ADDR + board.uds_offset), ((gitversion[7]<< 8U) | gitversion[6]), ((gitversion[5] << 24U) | (gitversion[4] << 16U) | (gitversion[3] << 8U) | 0x21U), 8U);
-            uds_debug_request = 0;
-            break;
+      default:
+        if ((dlr & 0xFF) == 0x30U) {
+          sep_time = (dlr >> 16U) & 0xFF;
+          delay(sep_time);
+          switch(uds_debug_request) {
+            // APPLICATION SOFTWARE IDENTIFICATION : F181
+            case 0xF181U:
+              can_send_msg((DEBUG_R_ADDR + board.uds_offset), ((gitversion[7]<< 8U) | gitversion[6]), ((gitversion[5] << 24U) | (gitversion[4] << 16U) | (gitversion[3] << 8U) | 0x21U), 8U);
+              uds_debug_request = 0;
+              break;
+          }
         }
         break;
     }
