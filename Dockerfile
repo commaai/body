@@ -15,6 +15,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libtool \
     libssl-dev \
     libsqlite3-dev \
+    libffi-dev \
     locales \
     make \
     patch \
@@ -31,8 +32,8 @@ RUN curl -L https://github.com/pyenv/pyenv-installer/raw/master/bin/pyenv-instal
 ENV PATH="/root/.pyenv/bin:/root/.pyenv/shims:${PATH}"
 
 COPY requirements.txt /tmp/
-RUN pyenv install 3.8.10 && \
-    pyenv global 3.8.10 && \
+RUN pyenv install 3.11.4 && \
+    pyenv global 3.11.4 && \
     pyenv rehash && \
     pip install --no-cache-dir -r /tmp/requirements.txt
 
