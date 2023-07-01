@@ -15,6 +15,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libtool \
     libssl-dev \
     libsqlite3-dev \
+    libffi-dev \
     locales \
     make \
     patch \
