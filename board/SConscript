@@ -132,7 +132,6 @@ with open("obj/cert.h", "w") as f:
 
 for project_name in build_projects:
   project = build_projects[project_name]
-  #linkerscript_fn = File(project["LINKER_SCRIPT"]).srcnode().abspath
   linkerscript_fn = File(project["LINKER_SCRIPT"]).srcnode().relpath
 
   flags = [
