@@ -1,5 +1,6 @@
 import os
 import subprocess
+import re
 
 PREFIX = "arm-none-eabi-"
 BUILDER = "DEV"
@@ -36,13 +37,6 @@ else:
 
 if os.getenv("DEBUG"):
   common_flags += ["-DDEBUG"]
-
-includes = [
-  "inc/STM32F4xx_HAL_Driver/Inc",
-  "inc",
-  "..",
-  ".",
-]
 
 c_sources = [
   ["hal_flash", "inc/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_flash.c"],
@@ -87,7 +81,6 @@ def get_version(builder, build_type):
     git = "00000000"
   return f"{git}"
 
-
 def to_c_uint32(x):
   nums = []
   for _ in range(0x20):
@@ -129,6 +122,37 @@ certs = [get_key_header(n) for n in ["debug", "release"]]
 with open("obj/cert.h", "w") as f:
   for cert in certs:
     f.write("\n".join(cert) + "\n")
+  
+includes = [
+  "/usr/lib/gcc/arm-none-eabi/9.2.1/include",
+  "inc/STM32F4xx_HAL_Driver/Inc/Legacy",
+  "inc/STM32F4xx_HAL_Driver/Inc",
+  "inc",
+  '..',
+  '.'
+  ]
+
+def exist_scan(node, env, path):
+  include_re = re.compile(r'^#include\s+(\S+)$', re.M)
+  exist_files = []
+
+  contents = node.get_text_contents()
+  include_dirs = include_re.findall(contents)
+  cpppaths = env["CPPPATH"]
+  
+  for file in include_dirs:
+    file = file.strip('"<>"')
+    for cpppath in cpppaths:
+      cpppath = Dir(cpppath).relpath
+      p = os.path.join(cpppath, file)
+      if os.path.isfile(p):
+        exist_files.append(File(p))
+  return exist_files
+my_exist_scan = Scanner(name="EXIST_SCANNER",function=exist_scan)
+file_extensions = ['.c', '.h', '.cc', '.cpp']
+for e in file_extensions:
+  SourceFileScanner.add_scanner(e,my_exist_scan)
+  
 
 for project_name in build_projects:
   project = build_projects[project_name]
@@ -166,6 +190,8 @@ for project_name in build_projects:
       'Objcopy': Builder(generator=objcopy, suffix='.bin', src_suffix='.elf')
     }
   )
+  
+
   startup = project_env.Object(project["STARTUP_FILE"])
 
   c_bstub_obj_list = []
