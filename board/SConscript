@@ -1,6 +1,5 @@
 import os
 import subprocess
-import re
 
 PREFIX = "arm-none-eabi-"
 BUILDER = "DEV"
@@ -124,35 +123,12 @@ with open("obj/cert.h", "w") as f:
     f.write("\n".join(cert) + "\n")
   
 includes = [
-  "/usr/lib/gcc/arm-none-eabi/9.2.1/include",
   "inc/STM32F4xx_HAL_Driver/Inc/Legacy",
   "inc/STM32F4xx_HAL_Driver/Inc",
   "inc",
   '..',
   '.'
   ]
-
-def exist_scan(node, env, path):
-  include_re = re.compile(r'^#include\s+(\S+)$', re.M)
-  exist_files = []
-
-  contents = node.get_text_contents()
-  include_dirs = include_re.findall(contents)
-  cpppaths = env["CPPPATH"]
-  
-  for file in include_dirs:
-    file = file.strip('"<>"')
-    for cpppath in cpppaths:
-      cpppath = Dir(cpppath).relpath
-      p = os.path.join(cpppath, file)
-      if os.path.isfile(p):
-        exist_files.append(File(p))
-  return exist_files
-my_exist_scan = Scanner(name="EXIST_SCANNER",function=exist_scan)
-file_extensions = ['.c', '.h', '.cc', '.cpp']
-for e in file_extensions:
-  SourceFileScanner.add_scanner(e,my_exist_scan)
-  
 
 for project_name in build_projects:
   project = build_projects[project_name]
