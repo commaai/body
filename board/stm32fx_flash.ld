@@ -59,12 +59,6 @@ SECTIONS
     . = ALIGN(4);
   } >FLASH
 
-  /* Git version immediately after vector table (offset 0x1D8 in binary) */
-  .gitversion :
-  {
-    KEEP(*(.gitversion))
-  } >FLASH
-
   /* The program code and other data goes into FLASH */
   .text :
   {

@@ -1,4 +1,5 @@
 extern uint8_t hw_type;
+extern void *_app_start[];
 void can_send_msg(uint32_t addr, uint32_t dhr, uint32_t dlr, uint8_t len);
 
 uint8_t uid[10];
@@ -6,6 +7,9 @@ uint32_t uds_engine_request = 0;
 uint32_t uds_debug_request = 0;
 uint8_t knee_detected = 0;
 uint8_t sep_time = 0;
+
+uint8_t sig_buf[128];
+uint8_t sig_idx = 0;
 
 void process_uds(uint32_t addr, uint32_t dlr) {
   memcpy(uid, (void *)0x1FFF7A10U, 0xAU);
@@ -63,6 +67,16 @@ void process_uds(uint32_t addr, uint32_t dlr) {
         can_send_msg(ENGINE_R_ADDR + board.uds_offset, 0x4D4F4390U, 0xF1621410U, 8U);
         uds_engine_request = 0xF190U;
         break;
+      // FIRMWARE SIGNATURE : F184
+      case 0x84F12203U: {
+        uint32_t code_len = (uint32_t)_app_start[0];
+        (void)memcpy(sig_buf, ((char *)_app_start) + code_len, 128U);
+        sig_idx = 3U;
+        uint32_t dhr = ((uint32_t)sig_buf[2] << 24U) | ((uint32_t)sig_buf[1] << 16U) | ((uint32_t)sig_buf[0] << 8U) | 0x84U;
+        can_send_msg(ENGINE_R_ADDR + board.uds_offset, dhr, 0xF1628310U, 8U);
+        uds_engine_request = 0xF184U;
+        break;
+      }
       // FLOW CONTROL MESSAGE
       default:
         if ((dlr & 0xFF) == 0x30U) {
@@ -85,6 +99,24 @@ void process_uds(uint32_t addr, uint32_t dlr) {
               can_send_msg(ENGINE_R_ADDR + board.uds_offset, 0x314E4F49U, 0x53524522U, 8U);
               uds_engine_request = 0;
               break;
+            // FIRMWARE SIGNATURE : F184
+            case 0xF184U: {
+              uint8_t sn = 1U;
+              while (sig_idx < 128U) {
+                uint8_t frame[8] = {0};
+                frame[0] = 0x20U | (sn & 0x0FU);
+                uint8_t remaining = 128U - sig_idx;
+                uint8_t n = (remaining < 7U) ? remaining : 7U;
+                (void)memcpy(&frame[1], &sig_buf[sig_idx], n);
+                uint32_t cf_dlr = ((uint32_t)frame[3] << 24U) | ((uint32_t)frame[2] << 16U) | ((uint32_t)frame[1] << 8U) | (uint32_t)frame[0];
+                uint32_t cf_dhr = ((uint32_t)frame[7] << 24U) | ((uint32_t)frame[6] << 16U) | ((uint32_t)frame[5] << 8U) | (uint32_t)frame[4];
+                can_send_msg(ENGINE_R_ADDR + board.uds_offset, cf_dhr, cf_dlr, 8U);
+                sig_idx += n;
+                sn++;
+              }
+              uds_engine_request = 0;
+              break;
+            }
           }
         }
         break;
