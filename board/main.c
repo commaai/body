@@ -168,8 +168,6 @@ int main(void) {
         }
 
         if (ignition == 1 && enable_motors == 0 && (!rtY_Left.z_errCode && !rtY_Right.z_errCode) && (ABS(cmdL) < 50 && ABS(cmdR) < 50)) {
-          beepShort(6); // make 2 beeps indicating the motor enable
-          beepShort(4);
           HAL_Delay(100);
           cmdL = cmdR = 0;
           enable_motors = 1; // enable motors
@@ -299,7 +297,17 @@ int main(void) {
           dat[2] = rtY_Right.z_errCode;
           can_send_msg((0x202U + board.can_addr_offset), 0x0U, ((dat[2] << 16U) | (dat[1] << 8U) | dat[0]), 3U);
         }
-        out_enable(LED_GREEN, ignition);
+
+        if (batVoltage < BAT_LVL1) { // critical, red
+          out_enable(LED_RED, ignition);
+          out_enable(LED_GREEN, false);
+        } else if (batVoltage < BAT_LVL2) { // warning, yellow
+          out_enable(LED_RED, ignition);
+          out_enable(LED_GREEN, ignition);
+        } else {
+          out_enable(LED_RED, false);
+          out_enable(LED_GREEN, ignition);
+        }
 
         main_loop_10Hz_runtime = HAL_GetTick() - main_loop_10Hz_runtime;
         main_loop_10Hz = HAL_GetTick();
@@ -328,7 +336,16 @@ int main(void) {
         can_send_msg((0x203U + board.can_addr_offset), 0x0U, ((dat[3] << 24U) | (dat[2] << 16U) | (dat[1] << 8U) | dat[0]), 4U);
 
         out_enable(LED_BLUE, false); // Reset LED after CAN RX
-        out_enable(LED_GREEN, true); // Always use LED to show that body is on
+
+        if (batVoltage < BAT_LVL1) {        // critical, red heartbeat
+          out_enable(LED_RED, true);
+          out_enable(LED_GREEN, false);
+        } else if (batVoltage < BAT_LVL2) { // warning, yellow heartbeat
+          out_enable(LED_RED, true);
+          out_enable(LED_GREEN, true);
+        } else {                            // normal, green heartbeat
+          out_enable(LED_GREEN, true);
+        }
 
         if ((hw_type == HW_TYPE_BASE) && ignition) {
           ignition_off_counter = 0;
@@ -345,14 +362,6 @@ int main(void) {
           beepCount(2, 24, 1);
         } else if (TEMP_WARNING_ENABLE && board_temp_deg_c >= TEMP_WARNING) { // 5 beeps (low pitch): Mainboard temperature warning
           beepCount(5, 24, 1);
-        } else if (batVoltage < BAT_LVL1) { // 1 beep fast (medium pitch): Low bat 1
-          beepCount(0, 10, 6);
-          out_enable(LED_RED, true);
-        } else if (batVoltage < BAT_LVL2) { // 1 beep slow (medium pitch): Low bat 2
-          beepCount(0, 10, 30);
-        } else {  // do not beep
-          beepCount(0, 0, 0);
-          out_enable(LED_RED, false);
         }
 
         main_loop_1Hz_runtime = HAL_GetTick() - main_loop_1Hz_runtime;
@@ -368,7 +377,6 @@ int main(void) {
         } else if (cnt_press >= 10) {
           ignition = !ignition;
           out_enable(IGNITION, ignition);
-          beepShort(5);
           cnt_press = 0;
         }
       }
