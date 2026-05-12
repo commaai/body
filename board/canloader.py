@@ -6,6 +6,7 @@ import _thread
 import struct
 
 from panda import Panda  # pylint: disable=import-error
+from opendbc.car.structs import CarParams
 from opendbc.car.uds import CanClient, IsoTpMessage, MessageTimeoutError
 
 
@@ -98,7 +99,7 @@ if __name__ == "__main__":
 
   p = Panda()
   _thread.start_new_thread(heartbeat_thread, (p,))
-  p.set_safety_mode(Panda.SAFETY_BODY)
+  p.set_safety_mode(CarParams.SafetyModel.body)
 
   print("Flashing motherboard")
   flasher(p, addr, args.fn)
