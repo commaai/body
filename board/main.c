@@ -342,7 +342,6 @@ int main(void) {
           out_enable(LED_RED, true);
           out_enable(LED_GREEN, true);
         } else {                            // normal, green heartbeat
-          out_enable(LED_BLUE, false); // Reset LED after CAN RX
           out_enable(LED_GREEN, true);
         }
 
