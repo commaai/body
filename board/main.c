@@ -342,6 +342,7 @@ int main(void) {
           out_enable(LED_RED, true);
           out_enable(LED_GREEN, true);
         } else {                            // normal, green heartbeat
+          out_enable(LED_RED, false);
           out_enable(LED_GREEN, true);
         }
 
