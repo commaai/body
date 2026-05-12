@@ -19,6 +19,7 @@ Flash app through CAN bus with (standalone) panda:
 
 Flash app through CAN bus with (comma device) panda:
 
-1. kill openpilot or just the panda processes
-2. run `board/flash_base.sh`
-3. restart openpilot via `op start` or restart device
+1. compile body firmware on your computer and transfer it to the comma device
+2. kill openpilot or just the panda processes
+3. run `board/flash_base.sh`
+4. restart openpilot via `op start` or restart device
