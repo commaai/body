@@ -3,9 +3,56 @@ import os
 import time
 import argparse
 import _thread
-from panda import Panda, MCU_TYPE_F4  # pylint: disable=import-error
-from panda.tests.pedal.canhandle import CanHandle  # pylint: disable=import-error
+import struct
 
+from panda import Panda  # pylint: disable=import-error
+from opendbc.car.uds import CanClient, IsoTpMessage, MessageTimeoutError
+
+
+REQUEST_IN = 0xC0
+REQUEST_OUT = 0x40
+DEFAULT_ISOTP_TIMEOUT = 2
+
+MCU_TYPE_F4 = {
+  "sector_sizes": [0x4000 for _ in range(4)] + [0x10000] + [0x20000 for _ in range(11)],
+}
+
+class CanHandle:
+  def __init__(self, can_send, can_recv, bus):
+    self.client = CanClient(can_send, can_recv, tx_addr=1, rx_addr=2, bus=bus)
+
+  def transact(self, dat, timeout=DEFAULT_ISOTP_TIMEOUT, expect_disconnect=False):
+    try:
+      msg = IsoTpMessage(self.client, timeout=timeout)
+      msg.send(dat)
+      if expect_disconnect:
+        deadline = time.monotonic() + timeout
+        while not msg.tx_done:
+          msg.recv(timeout=0)
+          if not msg.tx_done and time.monotonic() > deadline:
+            raise MessageTimeoutError("timeout waiting for flow control")
+          time.sleep(0.01)
+        return b""
+      ret, _ = msg.recv()
+      return ret
+    except MessageTimeoutError as e:
+      raise TimeoutError from e
+
+  def controlWrite(self, request_type, request, value, index, data, timeout=DEFAULT_ISOTP_TIMEOUT, expect_disconnect=False):
+    dat = struct.pack("HHBBHHH", 0, 0, request_type, request, value, index, 0)
+    return self.transact(dat, timeout=timeout, expect_disconnect=expect_disconnect)
+
+  def controlRead(self, request_type, request, value, index, length, timeout=DEFAULT_ISOTP_TIMEOUT):
+    dat = struct.pack("HHBBHHH", 0, 0, request_type, request, value, index, length)
+    return self.transact(dat, timeout=timeout)
+
+  def bulkWrite(self, endpoint, data, timeout=DEFAULT_ISOTP_TIMEOUT):
+    dat = struct.pack("HH", endpoint, len(data)) + data
+    return self.transact(dat, timeout=timeout)
+
+  def bulkRead(self, endpoint, timeout=DEFAULT_ISOTP_TIMEOUT):
+    dat = struct.pack("HH", endpoint, 0)
+    return self.transact(dat, timeout=timeout)
 
 def heartbeat_thread(p):
   while True:
