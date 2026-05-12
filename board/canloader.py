@@ -19,8 +19,8 @@ MCU_TYPE_F4 = {
 }
 
 class CanHandle:
-  def __init__(self, can_send, can_recv, bus):
-    self.client = CanClient(can_send, can_recv, tx_addr=1, rx_addr=2, bus=bus)
+  def __init__(self, can_send, can_recv):
+    self.client = CanClient(can_send, can_recv, tx_addr=1, rx_addr=2, bus=0)
 
   def transact(self, dat, timeout=DEFAULT_ISOTP_TIMEOUT, expect_disconnect=False):
     try:
