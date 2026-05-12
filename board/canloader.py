@@ -14,7 +14,6 @@ from opendbc.car.uds import CanClient, IsoTpMessage, MessageTimeoutError
 REQUEST_IN = 0xC0
 REQUEST_OUT = 0x40
 DEFAULT_ISOTP_TIMEOUT = 2
-# bootstub reads the bulk-write length as a single byte and its ISO-TP buffer is 0x110
 FLASH_STEP = 0x10
 
 class MCU_TYPE_F4:
