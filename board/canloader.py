@@ -14,9 +14,9 @@ REQUEST_IN = 0xC0
 REQUEST_OUT = 0x40
 DEFAULT_ISOTP_TIMEOUT = 2
 
-MCU_TYPE_F4 = {
-  "sector_sizes": [0x4000 for _ in range(4)] + [0x10000] + [0x20000 for _ in range(11)],
-}
+class MCU_TYPE_F4:
+  class config:
+    sector_sizes = [0x4000 for _ in range(4)] + [0x10000] + [0x20000 for _ in range(11)]
 
 class CanHandle:
   def __init__(self, can_send, can_recv):
