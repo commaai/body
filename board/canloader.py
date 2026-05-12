@@ -14,7 +14,7 @@ from opendbc.car.uds import CanClient, IsoTpMessage, MessageTimeoutError
 REQUEST_IN = 0xC0
 REQUEST_OUT = 0x40
 DEFAULT_ISOTP_TIMEOUT = 2
-FLASH_STEP = 0x10
+FLASH_STEP = 0xF8
 
 class MCU_TYPE_F4:
   class config:
