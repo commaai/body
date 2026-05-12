@@ -335,8 +335,6 @@ int main(void) {
         dat[3] = (((battery_percent & 0x7FU) << 1U) | charger_connected);
         can_send_msg((0x203U + board.can_addr_offset), 0x0U, ((dat[3] << 24U) | (dat[2] << 16U) | (dat[1] << 8U) | dat[0]), 4U);
 
-        out_enable(LED_BLUE, false); // Reset LED after CAN RX
-
         if (batVoltage < BAT_LVL1) {        // critical, red heartbeat
           out_enable(LED_RED, true);
           out_enable(LED_GREEN, false);
@@ -344,6 +342,7 @@ int main(void) {
           out_enable(LED_RED, true);
           out_enable(LED_GREEN, true);
         } else {                            // normal, green heartbeat
+          out_enable(LED_BLUE, false); // Reset LED after CAN RX
           out_enable(LED_GREEN, true);
         }
 
