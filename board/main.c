@@ -360,6 +360,8 @@ int main(void) {
           beepCount(2, 24, 1);
         } else if (TEMP_WARNING_ENABLE && board_temp_deg_c >= TEMP_WARNING) { // 5 beeps (low pitch): Mainboard temperature warning
           beepCount(5, 24, 1);
+        } else { // do not beep
+          beepCount(0, 0, 0);
         }
 
         main_loop_1Hz_runtime = HAL_GetTick() - main_loop_1Hz_runtime;
