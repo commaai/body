@@ -4,6 +4,7 @@ import time
 import argparse
 import _thread
 import struct
+from itertools import accumulate
 
 from panda import Panda  # pylint: disable=import-error
 from opendbc.car.structs import CarParams
@@ -13,6 +14,8 @@ from opendbc.car.uds import CanClient, IsoTpMessage, MessageTimeoutError
 REQUEST_IN = 0xC0
 REQUEST_OUT = 0x40
 DEFAULT_ISOTP_TIMEOUT = 2
+# bootstub reads the bulk-write length as a single byte and its ISO-TP buffer is 0x110
+FLASH_STEP = 0x10
 
 class MCU_TYPE_F4:
   class config:
@@ -68,6 +71,26 @@ def flush_panda():
     if len(p.can_recv()) == 0:
       break
 
+def flash_can(handle, code, mcu_type):
+  assert handle.controlRead(REQUEST_IN, 0xb0, 0, 0, 0xc)[4:8] == b"\xde\xad\xd0\x0d", "flasher not present"
+
+  apps_sectors_cumsum = accumulate(mcu_type.config.sector_sizes[1:])
+  last_sector = next((i + 1 for i, v in enumerate(apps_sectors_cumsum) if v > len(code)), -1)
+  assert last_sector >= 1, "Binary too small? No sector to erase."
+  assert last_sector < 7, "Binary too large! Risk of overwriting provisioning chunk."
+
+  handle.controlWrite(REQUEST_IN, 0xb1, 0, 0, b'')
+  for i in range(1, last_sector + 1):
+    handle.controlWrite(REQUEST_IN, 0xb2, i, 0, b'')
+
+  for i in range(0, len(code), FLASH_STEP):
+    handle.bulkWrite(2, code[i:i + FLASH_STEP])
+
+  try:
+    handle.controlWrite(REQUEST_IN, 0xd8, 0, 0, b'', expect_disconnect=True)
+  except Exception:
+    pass
+
 def flasher(p, addr, file):
   p.can_send(addr, b"\xce\xfa\xad\xde\x1e\x0b\xb0\x0a", 0)
   time.sleep(0.1)
@@ -77,7 +100,7 @@ def flasher(p, addr, file):
   retries = 3 # How many times to retry on timeout error
   while(retries+1>0):
     try:
-      Panda.flash_static(CanHandle(p.can_send, p.can_recv), code, MCU_TYPE_F4)
+      flash_can(CanHandle(p.can_send, p.can_recv), code, MCU_TYPE_F4)
     except TimeoutError:
       print("Timeout, trying again...")
       retries -= 1
