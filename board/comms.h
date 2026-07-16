@@ -118,8 +118,10 @@ void can_rx(void) {
       uint8_t idx = dat[4] & 0xFU;
       if (crc_checksum(dat, 5, crc_poly) == dat[5]) {
         if (((current_idx + 1U) & 0xFU) == idx) {
-          cmdL = valueL;
-          cmdR = valueR;
+          // Reverse linear motion while preserving the steering direction.
+          // For a differential drive this requires negating and swapping the wheels.
+          cmdL = (int16_t)(0U - valueR);
+          cmdR = (int16_t)(0U - valueL);
           torque_cmd_timeout = 0;
         }
         current_idx = idx;

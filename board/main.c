@@ -216,8 +216,9 @@ int main(void) {
         if (ignition_off_counter <= IGNITION_OFF_DELAY) {
           // MOTORS_DATA: speed_L(2), speed_R(2), counter(1), checksum(1)
           uint8_t dat[8];
-          uint16_t speedL = rtY_Left.n_mot;
-          uint16_t speedR = -(rtY_Right.n_mot); // Invert speed sign for the right wheel
+          // Match the negate-and-swap transform used for incoming torque commands.
+          uint16_t speedL = rtY_Right.n_mot;
+          uint16_t speedR = -(rtY_Left.n_mot);
           dat[0] = (speedL >> 8U) & 0xFFU;
           dat[1] = speedL & 0xFFU;
           dat[2] = (speedR >> 8U) & 0xFFU;
